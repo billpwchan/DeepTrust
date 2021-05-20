@@ -10,7 +10,11 @@ def main():
                         choices=['AD', 'IR', 'RA'])
     # Anomaly Detection Arguments
     parser.add_argument("-t", "--ticker", help="Specify ticker", type=str)
-    parser.add_argument('-sd', "--start_date", help="Specify the start date", type=str)
+    parser.add_argument('-sd', "--start_date", help="Specify the start date (DD/MM/YYYY)",
+                        type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
+    parser.add_argument('-ed', "--end_date", help="Specify the end date (DD/MM/YYYY)",
+                        type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
+    parser.add_argument('-adm', "--ad_method", help="Specify the end date", type=str, choices=['arima', 'lof', 'if'])
     args = parser.parse_args()
 
     if args.module == 'AD' and \
@@ -18,7 +22,7 @@ def main():
         parser.error("Anomaly Detection requires --ticker, --start_date, --end_date, --ad_method")
 
     if args.module == 'AD':
-        ad_instance = AnomalyDetection(ticker=args.ticker)
+        ad_instance = AnomalyDetection(ticker=args.ticker, mode='arima')
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ import pickle
 
 
 class AnomalyDetection:
-    def __init__(self, mode: str, ticker: str):
+    def __init__(self, ticker: str, mode: str = 'arima'):
         self.mode = mode
         self.ticker = ticker
         self.time_series_df = pd.DataFrame()
@@ -52,5 +52,5 @@ class AnomalyDetection:
         with open(f'./anomaly_detection/{self.ticker}-arima.pkl', 'wb') as pkl:
             pickle.dump(stepwise_model, pkl)
 
-    def detect(self, start_date: datetime, end_date: datetime):
+    def detect(self, start_date: date, end_date: date):
         print("Hello")
