@@ -14,6 +14,14 @@ The DeepTrust is comprised of three interconnected modules:
   
 All modules function in sequential order within the DeepTrust framework, and jointly contribute to achieving an overall high level of precision in retrieving information from Twitter that constitutes a collection of trusted knowledge to explain financial anomalies. Solution effectiveness will be evaluated both module-wise and framework-wise to empirically conclude the practicality of the DeepTrust framework in fulfilling its objective. 
 
+## Command-line Interface Usages
+
+Retrieve a list of anomalies in `TWTR` (Twitter) pricing data between `04/01/2021` and `20/05/2021` using ARIMA-based 
+detection method.
+```bash
+python main.py -m AD -t TWTR -sd 04/01/2021 -ed 20/05/2021 --ad_method arima
+```
+
 ## Future Plans
 
 - [ ] Information Retrieval Modules
