@@ -25,6 +25,7 @@ def main():
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
         ad_instance.train()
         anomaly_list = ad_instance.detect(args.start_date, args.end_date)
+        print(anomaly_list)
 
 
 if __name__ == '__main__':

@@ -61,7 +61,7 @@ class AnomalyDetection:
             # filter outlier values
             self.outlier_values = self.time_series_df.iloc[outlier_index]
         elif self.mode == 'if':
-            clf = IsolationForest(max_features=2, n_estimators=500)
+            clf = IsolationForest(max_features=3, n_estimators=500)
             multivariate_df = self.time_series_df[['date', 'close', 'volume']]
             multivariate_df['date'] = multivariate_df['date'].apply(
                 lambda x: datetime.timestamp(datetime.strptime(x, '%Y-%m-%d')))
