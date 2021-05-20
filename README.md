@@ -16,8 +16,8 @@ All modules function in sequential order within the DeepTrust framework, and joi
 
 ## Future Plans
 
-- [] Information Retrieval Modules
-- [] Reliability Assessment Module
+- [ ] Information Retrieval Modules
+- [ ] Reliability Assessment Module
 
 -----------
 
