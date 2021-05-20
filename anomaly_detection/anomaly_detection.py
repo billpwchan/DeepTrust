@@ -1,20 +1,19 @@
 from datetime import date, datetime
+
 import pandas as pd
 
 pd.options.mode.chained_assignment = None
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import pyplot
-import plotly.graph_objs as go
-import math
-import statsmodels.api as sm
-import statsmodels.tsa.api as smt
-from sklearn.metrics import mean_squared_error
 from pmdarima.arima import auto_arima
 import yfinance as yf
 from pmdarima.arima import ADFTest
 import pickle
 from tqdm import trange
+import pandas as pd
+
+pd.options.mode.chained_assignment = None
+import numpy as np
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.ensemble import IsolationForest
 
 
 class AnomalyDetection:
@@ -36,19 +35,43 @@ class AnomalyDetection:
         return time_series_df
 
     def train(self):
-        adf_test = ADFTest(alpha=0.05)
-        res, stationary = adf_test.should_diff(self.price_vals)
+        if self.mode == 'arima':
+            adf_test = ADFTest(alpha=0.05)
+            res, stationary = adf_test.should_diff(self.price_vals)
 
-        stepwise_model = auto_arima(self.price_log, start_p=0, start_q=0,
-                                    max_p=12, max_q=12, max_d=12,
-                                    start_P=0, start_Q=0,
-                                    max_P=12, max_D=12, max_Q=12,
-                                    max_m=12, d=1, D=1, m=12, seasonal=False,
-                                    trace=True, stationary=stationary, error_action='ignore', suppress_warnings=True,
-                                    stepwise=True, n_fits=50)
+            stepwise_model = auto_arima(self.price_log, start_p=0, start_q=0,
+                                        max_p=12, max_q=12, max_d=12,
+                                        start_P=0, start_Q=0,
+                                        max_P=12, max_D=12, max_Q=12,
+                                        max_m=12, d=1, D=1, m=12, seasonal=False,
+                                        trace=True, stationary=stationary, error_action='ignore',
+                                        suppress_warnings=True,
+                                        stepwise=True, n_fits=50)
 
-        with open(f'./anomaly_detection/models/{self.ticker}-arima.pkl', 'wb') as pkl:
-            pickle.dump(stepwise_model, pkl)
+            with open(f'./anomaly_detection/models/{self.ticker}-arima.pkl', 'wb') as pkl:
+                pickle.dump(stepwise_model, pkl)
+        elif self.mode == 'lof':
+            lof = LocalOutlierFactor(n_neighbors=3)
+            multivariate_df = self.time_series_df[['date', 'close', 'volume']]
+            multivariate_df['date'] = multivariate_df['date'].apply(
+                lambda x: datetime.timestamp(datetime.strptime(x, '%Y-%m-%d')))
+            y_pred = lof.fit_predict(multivariate_df)
+            # filter outlier index
+            outlier_index = np.where(y_pred == -1)  # negative values are outliers and positives inliers
+            # filter outlier values
+            self.outlier_values = self.time_series_df.iloc[outlier_index]
+        elif self.mode == 'if':
+            clf = IsolationForest(max_features=2, n_estimators=500)
+            multivariate_df = self.time_series_df[['date', 'close', 'volume']]
+            multivariate_df['date'] = multivariate_df['date'].apply(
+                lambda x: datetime.timestamp(datetime.strptime(x, '%Y-%m-%d')))
+            y_pred = clf.fit_predict(multivariate_df)
+            # filter outlier index
+            outlier_index = np.where(y_pred == -1)  # negative values are outliers and positives inliers
+            # filter outlier values
+            self.outlier_values = self.time_series_df.iloc[outlier_index]
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def __detect_classify_anomalies(output_df, window) -> pd.DataFrame:
@@ -80,34 +103,49 @@ class AnomalyDetection:
         output_df.date = pd.to_datetime(output_df['date'].astype(str), format="%Y-%m-%d")
         return output_df
 
-    def detect(self, start_date: date, end_date: date):
-        stepwise_model = pickle.load(open(f'./anomaly_detection/models/{self.ticker}-arima.pkl', 'rb'))
+    def detect(self, start_date: date, end_date: date) -> list:
+        """
+        Detect Anomalies within a given range and output a list of dates in %Y-%m-%d format
+        :param start_date: Start Date in date() format
+        :param end_date: End Date in date() format
+        :return: A list of dates in %Y-%m-%d format
+        """
+        if self.mode == 'arima':
+            stepwise_model = pickle.load(open(f'./anomaly_detection/models/{self.ticker}-arima.pkl', 'rb'))
+            # HAVE TO SPECIFY A TRADING DAY?
+            start_index = self.time_series_df.index[self.time_series_df['date'] == start_date.strftime('%Y-%m-%d')][0]
+            end_index = self.time_series_df.index[self.time_series_df['date'] == end_date.strftime('%Y-%m-%d')][0]
 
-        # HAVE TO SPECIFY A TRADING DAY?
-        start_index = self.time_series_df.index[self.time_series_df['date'] == start_date.strftime('%Y-%m-%d')][0]
-        end_index = self.time_series_df.index[self.time_series_df['date'] == end_date.strftime('%Y-%m-%d')][0]
+            train, test = self.price_vals[:start_index], self.price_vals[start_index:end_index + 1]
+            train_log, test_log = np.log10(train), np.log10(test)
 
-        train, test = self.price_vals[:start_index], self.price_vals[start_index:end_index + 1]
-        train_log, test_log = np.log10(train), np.log10(test)
+            history = [x for x in train_log]
+            predictions = list()
+            predict_log = list()
+            for t in trange(len(test_log)):
+                stepwise_model.fit(history)
+                output = stepwise_model.predict(n_periods=1)
+                predict_log.append(output[0])
+                predictions.append(10 ** output[0])
+                history.append(test_log[t])
 
-        history = [x for x in train_log]
-        predictions = list()
-        predict_log = list()
-        for t in trange(len(test_log)):
-            stepwise_model.fit(history)
-            output = stepwise_model.predict(n_periods=1)
-            predict_log.append(output[0])
-            predictions.append(10 ** output[0])
-            history.append(test_log[t])
+            predicted_df = pd.DataFrame()
+            predicted_df['date'] = self.time_series_df['date'][start_index:end_index + 1]
+            predicted_df['actual'] = test
+            predicted_df['predicted'] = predictions
+            predicted_df.reset_index(inplace=True, drop=True)
 
-        predicted_df = pd.DataFrame()
-        predicted_df['date'] = self.time_series_df['date'][start_index:end_index + 1]
-        predicted_df['actual'] = test
-        predicted_df['predicted'] = predictions
-        predicted_df.reset_index(inplace=True, drop=True)
+            classify_df = AnomalyDetection.__detect_classify_anomalies(predicted_df, 7)
+            classify_df.reset_index(inplace=True, drop=True)
+            output_data = classify_df[classify_df['anomaly_points'].notnull()]
+            output_data.to_csv(f'./anomaly_detection/reports/{self.ticker}_arima_anomalies_{start_date}_{end_date}.csv')
+        elif self.mode == 'lof' or self.mode == 'if':
+            output_data = self.outlier_values[
+                (self.outlier_values['date'] >= start_date.strftime('%Y-%m-%d')) &
+                (self.outlier_values['date'] <= end_date.strftime('%Y-%m-%d'))]
+        else:
+            raise NotImplementedError
 
-        classify_df = AnomalyDetection.__detect_classify_anomalies(predicted_df, 7)
-        classify_df.reset_index(inplace=True, drop=True)
-        output_data = classify_df[classify_df['anomaly_points'].notnull()]
-
-        output_data.to_csv(f'./anomaly_detection/reports/{self.ticker}_anomalies_{start_date}_{end_date}.csv')
+        output_data.to_csv(
+            f'./anomaly_detection/reports/{self.ticker}_{self.mode}_anomalies_{start_date}_{end_date}.csv')
+        return output_data['date'].tolist()

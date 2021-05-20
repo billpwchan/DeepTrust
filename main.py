@@ -24,7 +24,7 @@ def main():
     if args.module == 'AD':
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
         ad_instance.train()
-        ad_instance.detect(args.start_date, args.end_date)
+        anomaly_list = ad_instance.detect(args.start_date, args.end_date)
 
 
 if __name__ == '__main__':
