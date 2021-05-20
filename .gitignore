@@ -378,3 +378,5 @@ fabric.properties
 # pytype static type analyzer
 
 # Cython debug symbols
+
+./anomaly_detection/reports/*
