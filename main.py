@@ -22,7 +22,9 @@ def main():
         parser.error("Anomaly Detection requires --ticker, --start_date, --end_date, --ad_method")
 
     if args.module == 'AD':
-        ad_instance = AnomalyDetection(ticker=args.ticker, mode='arima')
+        ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
+        ad_instance.train()
+        ad_instance.detect(args.start_date, args.end_date)
 
 
 if __name__ == '__main__':
