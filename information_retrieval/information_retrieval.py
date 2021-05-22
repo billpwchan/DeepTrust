@@ -1,12 +1,15 @@
 import configparser
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import eikon as ek
 import pandas as pd
 from searchtweets import ResultStream, collect_results, gen_rule_payload, load_credentials
 from OpenPermID import OpenPermID
 import json
+from pathlib import Path
 
+
+    # file exists
 
 class TwitterAPIInterface:
     def __init__(self):
@@ -52,10 +55,27 @@ class EikonAPIInterface:
 
     @staticmethod
     def get_eikon_news(ric: str, input_date: date):
-        news_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN', date_to=input_date.strftime('%Y-%m-%d'),
-                                        count=100)
-        news_df.to_csv('TWTR_test.csv')
-        return news_df
+        """
+        Get Maximum of 100 news (usually covers 3-4 days before the anomaly date)
+        :param ric:
+        :param input_date:
+        :return:
+        """
+        file_path = f'./information_retrieval/news/{ric}_Headlines_{input_date}.csv'
+        file_path_check = Path(file_path)
+        if not file_path_check.is_file():
+            # Collect News from Refinitiv API
+            news_headlines_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN',
+                                            date_to=(input_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                                            count=100)
+            news_headlines_df.to_csv(file_path)
+        else:
+            news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
+
+        for story_id in news_headlines_df['storyId'].to_list():
+            print(story_id)
+
+        return None
 
     def get_intelligent_tagging(self, query: str, relevance_threshold: int = 0) -> list:
         output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
