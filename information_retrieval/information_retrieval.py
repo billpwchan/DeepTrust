@@ -1,4 +1,5 @@
 import configparser
+import time
 from datetime import date, datetime, timedelta
 
 import eikon as ek
@@ -11,8 +12,9 @@ import json
 from pathlib import Path
 import csv
 
-
 # file exists
+from tqdm import tqdm
+
 
 class TwitterAPIInterface:
     def __init__(self):
@@ -57,11 +59,11 @@ class EikonAPIInterface:
         return ric
 
     @staticmethod
-    def get_eikon_news(ric: str, input_date: date):
+    def get_eikon_news(ric: str, input_date: date) -> list:
         """
-        Get Maximum of 100 news (usually covers 3-4 days before the anomaly date)
-        :param ric:
-        :param input_date:
+        Get Maximum of 100 news (usually covers 3-4 days before the anomaly date), and return a list of documents
+        :param ric: Reuters RIC code
+        :param input_date: The anomaly date
         :return:
         """
         file_path = f'./information_retrieval/news/{ric}_Headlines_{input_date}.csv'
@@ -76,22 +78,23 @@ class EikonAPIInterface:
         else:
             news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
 
-        for story_id in news_headlines_df['storyId'].to_list():
+        for story_id in tqdm(news_headlines_df['storyId'].to_list()):
             try:
                 news_story = ek.get_news_story(story_id=story_id)
+                time.sleep(1)
                 soup = BeautifulSoup(news_story, "lxml")  # create a BeautifulSoup object from our HTML news article
                 output_news.append(soup.get_text(strip=True))
             except EikonError:
                 continue
 
-        with open(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', 'w') as f:
+        with open(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', 'w', encoding='utf-8') as f:
             # using csv.writer method from CSV package
             write = csv.writer(f)
             write.writerow(output_news)
 
-        return None
+        return output_news
 
-    def get_intelligent_tagging(self, query: str, relevance_threshold: int = 0) -> list:
+    def get_intelligent_tagging(self, query: str, relevance_threshold: float = 0) -> list:
         output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
         news_parsed = json.loads(output)
         enhanced_term_list = []
@@ -126,6 +129,11 @@ class InformationRetrieval:
         """
         We should have two versions of query, one for Eikon and one for Twitter with verified accounts
         """
-        retrieved_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
+        query_keywords = []
+
+        # Use Refinitiv News to enhance query keywords
+        eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
+        for news in tqdm(eikon_news):
+            query_keywords.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.2))
 
         # tags = self.ek_instance.get_intelligent_tagging(query="TESTING QUERY")
