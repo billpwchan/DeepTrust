@@ -15,11 +15,20 @@ def main():
     parser.add_argument('-ed', "--end_date", help="Specify the end date (DD/MM/YYYY)",
                         type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
     parser.add_argument('-adm', "--ad_method", help="Specify the end date", type=str, choices=['arima', 'lof', 'if'])
+    # Information Retrieval Arguments
+    parser.add_argument('-ad', "--anomaly_date", help="Specify the anomaly date",
+                        type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
+
+    # Parse Arguments
     args = parser.parse_args()
+
 
     if args.module == 'AD' and \
             (args.ticker is None or args.start_date is None or args.end_date is None or args.ad_method is None):
         parser.error("Anomaly Detection requires --ticker, --start_date, --end_date, --ad_method")
+
+    if args.module == 'IR' and (args.ticker is None or args.anomaly_date is None):
+        parser.error("Information Retrieval requires --ticker, --anomaly_date")
 
     if args.module == 'AD':
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
@@ -29,17 +38,8 @@ def main():
         print(anomaly_summary)
 
     if args.module == 'IR':
-        config = configparser.ConfigParser()
-        config.read('./config.ini')
-        EK_API_KEY = config.get('Eikon.Config', 'EK_API_KEY')
-        OPEN_PREMID = config.get('Eikon.Config', 'OPEN_PREMID')
-        ek_instance = EikonAPIInterface(ek_api_key=EK_API_KEY, open_premid=OPEN_PREMID)
-
-        tags = ek_instance.get_intelligent_tagging(query="TESTING QUERY")
-        print(tags)
-
-        # ir_instance = InformationRetrieval(api_key=API_KEY)
-        # ir_instance.get_news(args.start_date, args.end_date)
+        ir_instance = InformationRetrieval(input_date=args.anomaly_date, ticker=args.ticker)
+        ir_instance.initialize_query()
 
         # tw_instance = TwitterAPIInterface()
         # tw_instance.build_query()

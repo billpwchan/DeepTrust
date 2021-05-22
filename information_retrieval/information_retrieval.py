@@ -1,3 +1,4 @@
+import configparser
 from datetime import date
 
 import eikon as ek
@@ -39,13 +40,22 @@ class TwitterAPIInterface:
 
 class EikonAPIInterface:
     def __init__(self, ek_api_key, open_premid):
-        # ek.set_app_key(ek_api_key)
+        ek.set_app_key(ek_api_key)
         self.opid = OpenPermID()
         self.opid.set_access_token(open_premid)
 
-    def get_news(self, start_date: date, end_date: date):
-        news_df = ek.get_news_headlines(query='IBM', date_from=start_date, date_to=end_date)
-        print(news_df)
+    @staticmethod
+    def get_ric_symbology(ticker: str) -> str:
+        isin = ek.get_symbology(ticker, from_symbol_type='ticker', to_symbol_type='ISIN').loc[ticker, 'ISIN']
+        ric = ek.get_symbology(isin, from_symbol_type='ISIN', to_symbol_type='RIC').loc[isin, 'RIC']
+        return ric
+
+    @staticmethod
+    def get_eikon_news(ric: str, input_date: date):
+        news_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN', date_to=input_date.strftime('%Y-%m-%d'),
+                                        count=100)
+        news_df.to_csv('TWTR_test.csv')
+        return news_df
 
     def get_intelligent_tagging(self, query: str, relevance_threshold: int = 0) -> list:
         output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
@@ -68,10 +78,20 @@ class EikonAPIInterface:
 
 
 class InformationRetrieval:
-    def __init__(self):
-        print("IR Instance Created")
+    def __init__(self, input_date: date, ticker: str):
+        config = configparser.ConfigParser()
+        config.read('./config.ini')
+        EK_API_KEY = config.get('Eikon.Config', 'EK_API_KEY')
+        OPEN_PREMID = config.get('Eikon.Config', 'OPEN_PREMID')
+        self.ek_instance = EikonAPIInterface(ek_api_key=EK_API_KEY, open_premid=OPEN_PREMID)
+        # self.tw_instance = TwitterAPIInterface()
+        self.input_date = input_date
+        self.ric = self.ek_instance.get_ric_symbology(ticker)
 
     def initialize_query(self):
         """
         We should have two versions of query, one for Eikon and one for Twitter with verified accounts
         """
+        retrieved_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
+
+        # tags = self.ek_instance.get_intelligent_tagging(query="TESTING QUERY")
