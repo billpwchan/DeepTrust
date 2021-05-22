@@ -3,13 +3,16 @@ from datetime import date, datetime, timedelta
 
 import eikon as ek
 import pandas as pd
+from bs4 import BeautifulSoup
+from eikon import EikonError
 from searchtweets import ResultStream, collect_results, gen_rule_payload, load_credentials
 from OpenPermID import OpenPermID
 import json
 from pathlib import Path
+import csv
 
 
-    # file exists
+# file exists
 
 class TwitterAPIInterface:
     def __init__(self):
@@ -62,18 +65,29 @@ class EikonAPIInterface:
         :return:
         """
         file_path = f'./information_retrieval/news/{ric}_Headlines_{input_date}.csv'
+        output_news = []
         file_path_check = Path(file_path)
         if not file_path_check.is_file():
             # Collect News from Refinitiv API
             news_headlines_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN',
-                                            date_to=(input_date + timedelta(days=1)).strftime('%Y-%m-%d'),
-                                            count=100)
+                                                      date_to=(input_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                                                      count=100)
             news_headlines_df.to_csv(file_path)
         else:
             news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
 
         for story_id in news_headlines_df['storyId'].to_list():
-            print(story_id)
+            try:
+                news_story = ek.get_news_story(story_id=story_id)
+                soup = BeautifulSoup(news_story, "lxml")  # create a BeautifulSoup object from our HTML news article
+                output_news.append(soup.get_text(strip=True))
+            except EikonError:
+                continue
+
+        with open(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', 'w') as f:
+            # using csv.writer method from CSV package
+            write = csv.writer(f)
+            write.writerow(output_news)
 
         return None
 
