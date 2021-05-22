@@ -39,7 +39,7 @@ class TwitterAPIInterface:
 
 class EikonAPIInterface:
     def __init__(self, ek_api_key, open_premid):
-        ek.set_app_key(ek_api_key)
+        # ek.set_app_key(ek_api_key)
         self.opid = OpenPermID()
         self.opid.set_access_token(open_premid)
 
@@ -47,10 +47,21 @@ class EikonAPIInterface:
         news_df = ek.get_news_headlines(query='IBM', date_from=start_date, date_to=end_date)
         print(news_df)
 
-    def get_intelligent_tagging(self, query: str):
+    def get_intelligent_tagging(self, query: str, relevance_threshold: int = 0) -> list:
         output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
-        parsed = json.loads(output)
-        print(json.dumps(parsed, indent=4, sort_keys=True))
+        news_parsed = json.loads(output)
+        enhanced_term_list = []
+        for key, value in news_parsed.items():
+            # Filter Out Irrelevant Keys (i.e., Doc)
+            if '_typeGroup' not in value:
+                continue
+            # Named-Entity Recognition
+            if value['_typeGroup'] == 'entities':
+                # The Resolution in entity should always match with the given ticker
+                enhanced_term_list.extend(
+                    [{'name': keywords, 'relevance': value['relevance'], 'type': value['_type']} for keywords in
+                     value['name'].split('_') if value['relevance'] > relevance_threshold])
+        return enhanced_term_list
 
     def get_open_premid_usage(self) -> pd.DataFrame:
         return self.opid.get_usage()

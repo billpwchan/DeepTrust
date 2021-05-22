@@ -101,7 +101,7 @@ class AnomalyDetection:
 
     def detect(self, start_date: date, end_date: date) -> list:
         """
-        Detect Anomalies within a given range and output a list of dates in %Y-%m-%d format
+        Detect Anomalies within a given range and output a list of dates in %Y-%m-%d format (Datetime.date objects)
         :param start_date: Start Date in date() format
         :param end_date: End Date in date() format
         :return: A list of dates in %Y-%m-%d format
@@ -144,9 +144,14 @@ class AnomalyDetection:
 
         output_data.to_csv(
             f'./anomaly_detection/reports/{self.ticker}_{self.mode}_anomalies_{start_date}_{end_date}.csv')
-        return [datetime.fromtimestamp(timestamp) for timestamp in output_data['date'].tolist()]
+        return [timestamp.date() for timestamp in output_data['date'].tolist()]
 
     def format_anomaly(self, anomaly_list: list) -> dict:
+        """
+        Formats anomalies into a dictionary object. consists of ['ticker', 'name', 'date', 'quote_type'] attributes
+        :param anomaly_list: List of Datetime.date objects
+        :return: A dictionary of anomalies with relevant information
+        """
         output_dict = {'date': anomaly_list, 'ticker': self.ticker}
         info = yf.Ticker(self.ticker).info
         output_dict['name'] = info['longName']

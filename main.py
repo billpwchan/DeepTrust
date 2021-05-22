@@ -34,10 +34,15 @@ def main():
         EK_API_KEY = config.get('Eikon.Config', 'EK_API_KEY')
         OPEN_PREMID = config.get('Eikon.Config', 'OPEN_PREMID')
         ek_instance = EikonAPIInterface(ek_api_key=EK_API_KEY, open_premid=OPEN_PREMID)
+
+        tags = ek_instance.get_intelligent_tagging(query="TESTING QUERY")
+        print(tags)
+
         # ir_instance = InformationRetrieval(api_key=API_KEY)
         # ir_instance.get_news(args.start_date, args.end_date)
 
-        twitter = TwitterAPIInterface()
+        # tw_instance = TwitterAPIInterface()
+        # tw_instance.build_query()
 
 
 if __name__ == '__main__':
