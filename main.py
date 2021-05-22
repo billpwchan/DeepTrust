@@ -1,7 +1,7 @@
 import argparse
-
+import configparser
 from anomaly_detection import *
-from datetime import datetime
+from information_retrieval import *
 
 
 def main():
@@ -25,7 +25,19 @@ def main():
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
         ad_instance.train()
         anomaly_list = ad_instance.detect(args.start_date, args.end_date)
-        print(anomaly_list)
+        anomaly_summary = ad_instance.format_anomaly(anomaly_list)
+        print(anomaly_summary)
+
+    if args.module == 'IR':
+        config = configparser.ConfigParser()
+        config.read('./config.ini')
+        EK_API_KEY = config.get('Eikon.Config', 'EK_API_KEY')
+        OPEN_PREMID = config.get('Eikon.Config', 'OPEN_PREMID')
+        ek_instance = EikonAPIInterface(ek_api_key=EK_API_KEY, open_premid=OPEN_PREMID)
+        # ir_instance = InformationRetrieval(api_key=API_KEY)
+        # ir_instance.get_news(args.start_date, args.end_date)
+
+        twitter = TwitterAPIInterface()
 
 
 if __name__ == '__main__':

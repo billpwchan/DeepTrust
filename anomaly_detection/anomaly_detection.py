@@ -1,19 +1,15 @@
+import pickle
 from datetime import date, datetime
 
-import pandas as pd
-
-pd.options.mode.chained_assignment = None
-from pmdarima.arima import auto_arima
-import yfinance as yf
-from pmdarima.arima import ADFTest
-import pickle
-from tqdm import trange
-import pandas as pd
-
-pd.options.mode.chained_assignment = None
 import numpy as np
-from sklearn.neighbors import LocalOutlierFactor
+import pandas as pd
+import yfinance as yf
+from pmdarima.arima import ADFTest, auto_arima
 from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from tqdm import trange
+
+pd.options.mode.chained_assignment = None
 
 
 class AnomalyDetection:
@@ -149,3 +145,10 @@ class AnomalyDetection:
         output_data.to_csv(
             f'./anomaly_detection/reports/{self.ticker}_{self.mode}_anomalies_{start_date}_{end_date}.csv')
         return output_data['date'].tolist()
+
+    def format_anomaly(self, anomaly_list: list) -> dict:
+        output_dict = {date: anomaly_list, 'ticker': self.ticker}
+        info = yf.Ticker(self.ticker).info
+        output_dict['name'] = info.longName
+        output_dict['quote_type'] = info.quoteType.lower()
+        return output_dict
