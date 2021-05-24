@@ -73,7 +73,7 @@ class EikonAPIInterface:
             # Collect News from Refinitiv API
             news_headlines_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN',
                                                       date_to=(input_date + timedelta(days=1)).strftime('%Y-%m-%d'),
-                                                      count=100)
+                                                      count=2)
             news_headlines_df.to_csv(file_path)
         else:
             news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
@@ -94,6 +94,11 @@ class EikonAPIInterface:
 
         return output_news
 
+    @staticmethod
+    def get_company_names(ric: str) -> list:
+        company_names_df, err = ek.get_data(instruments=[ric], fields=["TR.CompanyName", "TR.CommonName"])
+        return list(set(company_names_df.iloc[0, :].tolist()))
+
     def get_intelligent_tagging(self, query: str, relevance_threshold: float = 0) -> list:
         output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
         news_parsed = json.loads(output)
@@ -107,7 +112,7 @@ class EikonAPIInterface:
                 # The Resolution in entity should always match with the given ticker
                 enhanced_term_list.extend(
                     [{'name': keywords, 'relevance': value['relevance'], 'type': value['_type']} for keywords in
-                     value['name'].split('_') if value['relevance'] > relevance_threshold])
+                     value['name'].split('_') if value['relevance'] >= relevance_threshold])
         return enhanced_term_list
 
     def get_open_premid_usage(self) -> pd.DataFrame:
@@ -124,6 +129,7 @@ class InformationRetrieval:
         # self.tw_instance = TwitterAPIInterface()
         self.input_date = input_date
         self.ric = self.ek_instance.get_ric_symbology(ticker)
+        self.company_names = self.ek_instance.get_company_names(self.ric)
 
     def initialize_query(self):
         """
@@ -132,8 +138,12 @@ class InformationRetrieval:
         query_keywords = []
 
         # Use Refinitiv News to enhance query keywords
+        # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
         eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
         for news in tqdm(eikon_news):
             query_keywords.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.2))
+
+        # Twitter ...
+        print(query_keywords)
 
         # tags = self.ek_instance.get_intelligent_tagging(query="TESTING QUERY")
