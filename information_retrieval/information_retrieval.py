@@ -81,13 +81,15 @@ class EikonAPIInterface:
 
         output_news = pd.DataFrame(columns=['news'])
         for story_id in tqdm(news_headlines_df['storyId'].to_list()):
-            try:
-                news_story = ek.get_news_story(story_id=story_id)
-                time.sleep(5)
-                soup = BeautifulSoup(news_story, "lxml")
-                output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
-            except EikonError:
-                continue
+            for retry_limit in range(5):
+                try:
+                    news_story = ek.get_news_story(story_id=story_id)
+                    time.sleep(5)
+                    soup = BeautifulSoup(news_story, "lxml")
+                    output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
+                except:
+                    continue
+                break
         output_news.to_csv(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', encoding='utf-8')
         return output_news['news'].tolist()
 
