@@ -5,7 +5,6 @@ from datetime import date, datetime, timedelta
 import eikon as ek
 import pandas as pd
 from bs4 import BeautifulSoup
-from eikon import EikonError
 from searchtweets import ResultStream, collect_results, gen_rule_payload, load_credentials
 from OpenPermID import OpenPermID
 import json
@@ -80,17 +79,22 @@ class EikonAPIInterface:
             news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
 
         output_news = pd.DataFrame(columns=['news'])
-        for story_id in tqdm(news_headlines_df['storyId'].to_list()):
-            for retry_limit in range(5):
-                try:
-                    news_story = ek.get_news_story(story_id=story_id)
-                    time.sleep(5)
-                    soup = BeautifulSoup(news_story, "lxml")
-                    output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
-                except:
-                    continue
-                break
-        output_news.to_csv(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', encoding='utf-8')
+        file_path = f'./information_retrieval/news/{ric}_stories_{input_date}.csv'
+        file_path_check = Path(file_path)
+        if not file_path_check.is_file():
+            for story_id in tqdm(news_headlines_df['storyId'].to_list()):
+                for retry_limit in range(5):
+                    try:
+                        news_story = ek.get_news_story(story_id=story_id)
+                        time.sleep(5)
+                        soup = BeautifulSoup(news_story, "lxml")
+                        output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
+                    except:
+                        continue
+                    break
+            output_news.to_csv(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', encoding='utf-8')
+        else:
+            output_news = pd.read_csv(file_path, index_col=0, header=0)
         return output_news['news'].tolist()
 
     @staticmethod
@@ -99,19 +103,26 @@ class EikonAPIInterface:
         return list(set(company_names_df.iloc[0, :].tolist()))
 
     def get_intelligent_tagging(self, query: str, relevance_threshold: float = 0) -> list:
-        output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
-        news_parsed = json.loads(output)
-        enhanced_term_list = []
-        for key, value in news_parsed.items():
-            # Filter Out Irrelevant Keys (i.e., Doc)
-            if '_typeGroup' not in value:
+        for retry_limit in range(5):
+            try:
+                output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
+            except:
                 continue
-            # Named-Entity Recognition
-            if value['_typeGroup'] == 'entities':
-                # The Resolution in entity should always match with the given ticker
-                enhanced_term_list.extend(
-                    [{'name': keywords, 'relevance': value['relevance'], 'type': value['_type']} for keywords in
-                     value['name'].split('_') if value['relevance'] >= relevance_threshold])
+            break
+        enhanced_term_list = []
+        if err is None:
+            news_parsed = json.loads(output)
+            enhanced_term_list = []
+            for key, value in news_parsed.items():
+                # Filter Out Irrelevant Keys (i.e., Doc)
+                if '_typeGroup' not in value:
+                    continue
+                # Named-Entity Recognition
+                if value['_typeGroup'] == 'entities':
+                    # The Resolution in entity should always match with the given ticker
+                    enhanced_term_list.extend(
+                        [{'name': keywords, 'relevance': value['relevance'], 'type': value['_type']} for keywords in
+                         value['name'].split('_') if value['relevance'] >= relevance_threshold])
         return enhanced_term_list
 
     def get_open_premid_usage(self) -> pd.DataFrame:
@@ -141,6 +152,7 @@ class InformationRetrieval:
         eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
         for news in tqdm(eikon_news):
             query_keywords.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.2))
+            time.sleep(5)
 
         # Twitter ...
         print(query_keywords)
