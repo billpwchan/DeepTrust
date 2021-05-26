@@ -13,7 +13,7 @@ from pathlib import Path
 import csv
 
 # file exists
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 
 class TwitterAPIInterface:
@@ -59,7 +59,7 @@ class EikonAPIInterface:
         return ric
 
     @staticmethod
-    def get_eikon_news(ric: str, input_date: date) -> list:
+    def get_eikon_news(ric: str, input_date: date, d_days: int = 5) -> list:
         """
         Get Maximum of 100 news (usually covers 3-4 days before the anomaly date), and return a list of documents
         :param ric: Reuters RIC code
@@ -67,32 +67,29 @@ class EikonAPIInterface:
         :return:
         """
         file_path = f'./information_retrieval/news/{ric}_Headlines_{input_date}.csv'
-        output_news = []
         file_path_check = Path(file_path)
         if not file_path_check.is_file():
             # Collect News from Refinitiv API
-            news_headlines_df = ek.get_news_headlines(query=f'R:{ric} AND Language:LEN',
-                                                      date_to=(input_date + timedelta(days=1)).strftime('%Y-%m-%d'),
-                                                      count=2)
+            news_headlines_df = pd.concat([ek.get_news_headlines(query=f'R:{ric} AND Language:LEN',
+                                                                 date_to=(input_date + timedelta(days=1 - i)).strftime(
+                                                                     '%Y-%m-%d'),
+                                                                 count=100) for i in trange(d_days)], ignore_index=True)
+            news_headlines_df.drop_duplicates(inplace=True)
             news_headlines_df.to_csv(file_path)
         else:
             news_headlines_df = pd.read_csv(file_path, index_col=0, header=0)
 
+        output_news = pd.DataFrame(columns=['news'])
         for story_id in tqdm(news_headlines_df['storyId'].to_list()):
             try:
                 news_story = ek.get_news_story(story_id=story_id)
-                time.sleep(1)
-                soup = BeautifulSoup(news_story, "lxml")  # create a BeautifulSoup object from our HTML news article
-                output_news.append(soup.get_text(strip=True))
+                time.sleep(5)
+                soup = BeautifulSoup(news_story, "lxml")
+                output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
             except EikonError:
                 continue
-
-        with open(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', 'w', encoding='utf-8') as f:
-            # using csv.writer method from CSV package
-            write = csv.writer(f)
-            write.writerow(output_news)
-
-        return output_news
+        output_news.to_csv(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', encoding='utf-8')
+        return output_news['news'].tolist()
 
     @staticmethod
     def get_company_names(ric: str) -> list:

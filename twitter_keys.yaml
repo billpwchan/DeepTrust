@@ -1,6 +1,0 @@
-search_tweets_api:
-  account_type: premium
-  endpoint: https://api.twitter.com/2/tweets/search/recent
-  consumer_key: w74UkKeH8Oz4fxcmTUftH38aR
-  consumer_secret: oTMIGKZQeTekPvLHKJahfc3GMdpYkWTaCcqo9YSwg4NIAqlhnR
-  bearer_token: AAAAAAAAAAAAAAAAAAAAAAilPwEAAAAAJiCPNUI9dHGGMgv8voMiovNd5hM%3DTXliCsMWDKyCYKLXFvUvIQ6OLB3F20ZvdQ84lzJCc7J6zl18IZ
