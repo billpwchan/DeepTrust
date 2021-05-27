@@ -1,36 +1,31 @@
 import configparser
+import json
 import time
-from datetime import date, datetime, timedelta
+import urllib.parse
+from datetime import date, timedelta, datetime
+from pathlib import Path
 
 import eikon as ek
 import pandas as pd
-from bs4 import BeautifulSoup
-from searchtweets import ResultStream, collect_results, gen_rule_payload, load_credentials
+import requests
 from OpenPermID import OpenPermID
-import json
-from pathlib import Path
-import csv
-
+from bs4 import BeautifulSoup
 # file exists
 from tqdm import tqdm, trange
 
 
 class TwitterAPIInterface:
-    def __init__(self):
+    def __init__(self, bearer_token):
         """
         Use https://github.com/twitterdev/search-tweets-python to power searches in Twitter API
         """
-        premium_search_args = load_credentials(filename="./twitter_keys.yaml",
-                                               yaml_key="search_tweets_api",
-                                               env_overwrite=False)
-        rule = gen_rule_payload("beyonce", results_per_call=100)
-        tweets = collect_results(rule,
-                                 max_results=100,
-                                 result_stream_args=premium_search_args)
-        for tweet in tweets[0:10]:
-            print(tweet.all_text, end='\n\n')
+        self.auth_header = self.__create_headers(bearer_token=bearer_token)
 
-    def build_query(self):
+    @staticmethod
+    def __create_headers(bearer_token) -> dict:
+        return {"Authorization": f"Bearer {bearer_token}"}
+
+    def build_query(self, input_date: date):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
@@ -42,14 +37,27 @@ class TwitterAPIInterface:
         # For DeepTrust, we must have language constraint to only English
         LANG_EN = 'lang:en'
 
-        # (apple OR iphone)         ipad
+        search_url = "https://api.twitter.com/2/tweets/search/all"
+
+        query_params = {
+            'query': f'stock (twtr OR twtr.k OR twitter) {LANG_EN} {VERIFIED_AUTHOR} {REMOVE_ADS}',
+            'end_time': datetime(input_date.year, input_date.month, input_date.day).astimezone().isoformat(),
+            'max_results': 10,
+            'media.fields': 'url'
+        }
+
+        response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
+        print(response.status_code)
+        if response.status_code != 200:
+            raise Exception(response.status_code, response.text)
+        return response.json()
 
 
 class EikonAPIInterface:
-    def __init__(self, ek_api_key, open_premid):
+    def __init__(self, ek_api_key, open_permid):
         ek.set_app_key(ek_api_key)
         self.opid = OpenPermID()
-        self.opid.set_access_token(open_premid)
+        self.opid.set_access_token(open_permid)
 
     @staticmethod
     def get_ric_symbology(ticker: str) -> str:
@@ -103,6 +111,13 @@ class EikonAPIInterface:
         return list(set(company_names_df.iloc[0, :].tolist()))
 
     def get_intelligent_tagging(self, query: str, relevance_threshold: float = 0) -> list:
+        """
+        Return a list of entities detected using Intelligent Tagging API
+        :param query: a document in either HTML or pure text format
+        :param relevance_threshold: the minimum relevance needed for an entity to be included in the enhanced keyword list
+        :return: a list of dictionaries with {'name', 'relevance', 'type'} attributes
+        """
+        output, err = None, None
         for retry_limit in range(5):
             try:
                 output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
@@ -110,7 +125,7 @@ class EikonAPIInterface:
                 continue
             break
         enhanced_term_list = []
-        if err is None:
+        if err is None and output is not None:
             news_parsed = json.loads(output)
             enhanced_term_list = []
             for key, value in news_parsed.items():
@@ -118,14 +133,14 @@ class EikonAPIInterface:
                 if '_typeGroup' not in value:
                     continue
                 # Named-Entity Recognition
-                if value['_typeGroup'] == 'entities':
+                if value['_typeGroup'] == 'entities' and 'name' in value:
                     # The Resolution in entity should always match with the given ticker
                     enhanced_term_list.extend(
                         [{'name': keywords, 'relevance': value['relevance'], 'type': value['_type']} for keywords in
                          value['name'].split('_') if value['relevance'] >= relevance_threshold])
         return enhanced_term_list
 
-    def get_open_premid_usage(self) -> pd.DataFrame:
+    def get_open_permid_usage(self) -> pd.DataFrame:
         return self.opid.get_usage()
 
 
@@ -133,28 +148,35 @@ class InformationRetrieval:
     def __init__(self, input_date: date, ticker: str):
         config = configparser.ConfigParser()
         config.read('./config.ini')
-        EK_API_KEY = config.get('Eikon.Config', 'EK_API_KEY')
-        OPEN_PREMID = config.get('Eikon.Config', 'OPEN_PREMID')
-        self.ek_instance = EikonAPIInterface(ek_api_key=EK_API_KEY, open_premid=OPEN_PREMID)
-        # self.tw_instance = TwitterAPIInterface()
+        self.ek_instance = EikonAPIInterface(ek_api_key=config.get('Eikon.Config', 'ek_api_key'),
+                                             open_permid=config.get('Eikon.Config', 'open_permid'))
+        self.tw_instance = TwitterAPIInterface(bearer_token=config.get('Twitter.Config', 'bearer_token'))
         self.input_date = input_date
         self.ric = self.ek_instance.get_ric_symbology(ticker)
         self.company_names = self.ek_instance.get_company_names(self.ric)
 
-    def initialize_query(self):
+    def initialize_query(self, top_n: int = 10):
         """
         We should have two versions of query, one for Eikon and one for Twitter with verified accounts
         """
-        query_keywords = []
 
-        # Use Refinitiv News to enhance query keywords
-        # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
-        eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
-        for news in tqdm(eikon_news):
-            query_keywords.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.2))
-            time.sleep(5)
+        # eikon_query_keywords = []
+        #
+        # # Use Refinitiv News to enhance query keywords
+        # # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
+        # eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
+        # for news in tqdm(eikon_news):
+        #     eikon_query_keywords.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.5))
+        #     time.sleep(5)
+        #
+        # # Filter duplicate keywords and URLs -> Around 70 keywords for a 5 days reuters search from 227 documents
+        # # -> Select top n keywords for expansion
+        # eikon_query_keywords = [item for item in Counter(
+        #     [item['name'].lower() for item in eikon_query_keywords if item['type'] != 'URL']
+        # ).most_common(top_n)]
 
-        # Twitter ...
-        print(query_keywords)
+        # Twitter search for Hashtags in Twitter Verified Accounts
+        twitter_hashtags = []
 
-        # tags = self.ek_instance.get_intelligent_tagging(query="TESTING QUERY")
+        json_response = self.tw_instance.build_query(self.input_date)
+        print(json.dumps(json_response, indent=4, sort_keys=True))
