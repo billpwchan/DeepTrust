@@ -28,7 +28,7 @@ class TwitterAPIInterface:
         return {"Authorization": f"Bearer {bearer_token}"}
 
     @staticmethod
-    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str):
+    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str, next_token = None):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
@@ -52,6 +52,10 @@ class TwitterAPIInterface:
             'end_time':     datetime(input_date.year, input_date.month, input_date.day).astimezone().isoformat(),
             'max_results':  10,
         }
+        # Get next page -> Search Pagination in Twitter Dev
+        if next_token is not None:
+            query_params['next_token'] = next_token
+
         return query_params
 
     def tw_search(self, query_params) -> json:
@@ -1943,5 +1947,4 @@ class InformationRetrieval:
                                                 companies=eikon_companies, ticker=self.ticker)
         tw_response = self.tw_instance.tw_search(tw_query)
 
-        print(tw_response['data'].keys())
-        # print(json.dumps(tw_response, indent=4, sort_keys=True))
+        print(tw_response['data'][0].keys())
