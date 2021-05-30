@@ -28,26 +28,26 @@ class TwitterAPIInterface:
         return {"Authorization": f"Bearer {bearer_token}"}
 
     @staticmethod
-    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str, next_token = None):
+    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
+                    next_token=None, verified: bool = True):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
-        market_domain = market_domain
+        input_date += timedelta(days=1)
 
+        market_domain = market_domain
         REMOVE_ADS = '-is:nullcast'
         # THESE ARE ALWAYS THE TRUSTED SOURCE!! -> USED FOR QUERY ENHANCEMENT
-        VERIFIED_AUTHOR = 'is:verified'
+        VERIFIED_AUTHOR = 'is:verified' if verified else ''
         # For DeepTrust, we must have language constraint to only English
         LANG_EN = 'lang:en'
         # Only detect original tweets
         ORIGINAL_TWEETS = '-is:retweet'
-
+        # OR {" OR ".join(companies)}
         query_params = {
-            'query':        f'{market_domain} price ({" OR ".join(entity_names)} OR {" OR ".join(companies)} OR #{ticker} OR ${ticker}) {LANG_EN} {VERIFIED_AUTHOR} {REMOVE_ADS} {ORIGINAL_TWEETS}',
-            'expansions':   'attachments.media_keys,geo.place_id,author_id',
-            'media.fields': 'duration_ms,height,media_key,preview_image_url,type,url,width,public_metrics',
-            'place.fields': 'contained_within,country,country_code,full_name,geo,id,name,place_type',
-            'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,reply_settings,source,text,withheld',
+            'query':        f'{market_domain} price ({" OR ".join(entity_names)} OR #{ticker} OR ${ticker}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
+            'expansions':   'author_id',
+            'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
             'end_time':     datetime(input_date.year, input_date.month, input_date.day).astimezone().isoformat(),
             'max_results':  10,
@@ -89,6 +89,7 @@ class EikonAPIInterface:
     def get_eikon_news(ric: str, input_date: date, d_days: int = 5) -> list:
         """
         Get Maximum of 100 news (usually covers 3-4 days before the anomaly date), and return a list of documents
+        :param d_days: number of past days news to be included
         :param ric: Reuters RIC code
         :param input_date: The anomaly date
         :return:
@@ -175,20 +176,24 @@ class InformationRetrieval:
         self.ticker = ticker
         self.ric = self.ek_instance.get_ric_symbology(self.ticker)
 
+    def get_eikon_keywords(self) -> list:
+        eikon_query_entities = []
+
+        # Use Refinitiv News to enhance query keywords
+        # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
+        eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
+        for news in tqdm(eikon_news):
+            eikon_query_entities.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.5))
+            time.sleep(5)
+
+        return eikon_query_entities
+
     def initialize_query(self, top_n: int = 10):
         """
         We should have two versions of query, one for Eikon and one for Twitter with verified accounts
         """
 
-        eikon_query_entities = []
-
-        # Use Refinitiv News to enhance query keywords
-        # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
-        # eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
-        # for news in tqdm(eikon_news):
-        #     eikon_query_entities.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.5))
-        #     time.sleep(5)
-
+        # eikon_query_entities = self.get_eikon_keywords()
         # FOR TESTING ONLY - OVERRIDE INTELLIGENT TAGGING
         eikon_query_entities = [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'},
                                 {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
@@ -1931,6 +1936,8 @@ class InformationRetrieval:
             [item['name'].lower() for item in eikon_query_entities if item['type'] != 'URL']
         ).most_common(top_n)]
 
+        print(f'Query Expansion Keywords from Reuters News: {eikon_query_keywords}')
+
         # Get a list of correlated companies & alternative names extracted from Reuters News
         eikon_companies = [f'"{item[0].strip(punctuation)}"' for item in Counter(
             [item['name'].lower() for item in eikon_query_entities if item['type'] == 'Company']
@@ -1940,11 +1947,22 @@ class InformationRetrieval:
         entity_names = [company.lower() for company in self.ek_instance.get_company_names(self.ric)]
 
         # Twitter search for Hashtags in Twitter Verified Accounts
-        twitter_hashtags = []
+        twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
 
         tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
                                                 entity_names=entity_names,
-                                                companies=eikon_companies, ticker=self.ticker)
+                                                companies=eikon_companies, ticker=self.ticker, verified=True)
         tw_response = self.tw_instance.tw_search(tw_query)
 
-        print(tw_response['data'][0].keys())
+        # Pseudo-Relevance Feedback Mechanism -> Get Entities identified in Tweets
+        for tweet in tw_response['data']:
+            if 'entities' in tweet:
+                if 'cashtags' in tweet['entities']:
+                    twitter_entities['cashtags'].extend([item['tag'] for item in tweet['entities']['cashtags']])
+                if 'hashtags' in tweet['entities']:
+                    twitter_entities['hashtags'].extend([item['tag'] for item in tweet['entities']['hashtags']])
+                if 'annotations' in tweet['entities']:
+                    twitter_entities['annotations'].extend(
+                        [item['normalized_text'] for item in tweet['entities']['annotations']])
+            print(tweet)
+        print(twitter_entities)
