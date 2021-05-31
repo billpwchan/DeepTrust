@@ -29,24 +29,28 @@ class TwitterAPIInterface:
 
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
-                    enhanced_list: list,
+                    enhanced_list: list = None,
                     next_token: str = None, verified: bool = True, max_results: int = 10):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
         if enhanced_list is None:
             enhanced_list = []
+
+        # Define query metadata
         market_domain = market_domain
         REMOVE_ADS = '-is:nullcast'
-        # THESE ARE ALWAYS THE TRUSTED SOURCE!! -> USED FOR QUERY ENHANCEMENT
         VERIFIED_AUTHOR = 'is:verified' if verified else ''
-        # For DeepTrust, we must have language constraint to only English
         LANG_EN = 'lang:en'
-        # Only detect original tweets
         ORIGINAL_TWEETS = '-is:retweet'
-        # OR {" OR ".join(companies)}
+
+        # Define query keywords
+        query_keywords = entity_names + enhanced_list
+        query_keywords.extend([f'#{ticker}', f'${ticker}'])
+        query_keywords = list(set(query_keywords))
+
         query_params = {
-            'query':        f'({market_domain} OR price) ({" OR ".join(entity_names)} OR #{ticker} OR ${ticker}{(" OR " + " OR ".join(enhanced_list)) if len(enhanced_list) != 0 else ""}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
+            'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
             'expansions':   'author_id',
             'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
@@ -1952,17 +1956,16 @@ class InformationRetrieval:
 
         # Twitter search for Hashtags in Twitter Verified Accounts
         twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
+        twitter_enhanced_list = []
 
-        for i in range(2):
-            enhanced_list = [f'${cashtag}' for cashtag in twitter_entities['cashtags']] + twitter_entities[
-                'annotations'] + [f'#{hashtag}' for hashtag in twitter_entities['hashtags']]
-            print(f'Query Expansion Keywords from Twitter: {enhanced_list}')
-            twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
+        while True:
             tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
-                                                    entity_names=entity_names, enhanced_list=enhanced_list,
+                                                    entity_names=entity_names, enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
-                                                    max_results=50)
+                                                    max_results=500)
             tw_response = self.tw_instance.tw_search(tw_query)
+
+            twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
             # Pseudo-Relevance Feedback Mechanism -> Get Entities identified in Tweets
             for tweet in tw_response['data']:
                 if 'entities' in tweet:
@@ -1973,7 +1976,18 @@ class InformationRetrieval:
                     if 'annotations' in tweet['entities']:
                         twitter_entities['annotations'].extend(
                             [item['normalized_text'] for item in tweet['entities']['annotations']])
+
             for key, values in twitter_entities.items():
                 twitter_entities[key] = [item[0] for item in
                                          Counter([entry.lower() for entry in values]).most_common(2)]
-            print(twitter_entities)
+
+            original_enhanced_list = twitter_enhanced_list.copy()
+            twitter_enhanced_list.extend([f'${cashtag}' for cashtag in twitter_entities['cashtags']] + twitter_entities[
+                'annotations'] + [f'#{hashtag}' for hashtag in twitter_entities['hashtags']])
+            twitter_enhanced_list = list(set(twitter_enhanced_list))
+            if original_enhanced_list == twitter_enhanced_list:
+                print("Twitter PRF Complete")
+                break
+            print(f'Query Expansion Keywords from Twitter: {twitter_enhanced_list}')
+
+        print(f'Finalized Query Expansion Keywords from Twitter: {twitter_enhanced_list}')
