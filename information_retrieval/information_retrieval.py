@@ -35,7 +35,7 @@ class TwitterAPIInterface:
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
                     enhanced_list: list = None, next_token: str = None, verified: bool = True, max_results: int = 10,
-                    d_days: int = 7):
+                    d_days: int = 5):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
@@ -61,7 +61,7 @@ class TwitterAPIInterface:
         query_params = {
             'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
             'expansions':   'author_id',
-            'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,referenced_tweets,source,text,withheld',
+            'tweet.fields': 'author_id,context_annotations,conversation_id,created_at,entities,geo,id,lang,public_metrics,referenced_tweets,source,text',
             'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
             'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone().isoformat(),
             'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone().isoformat(),
@@ -301,7 +301,8 @@ class InformationRetrieval:
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
                                                     max_results=500, next_token=next_token)
             tw_response = self.tw_instance.tw_search(tw_query)
-            self.db_instance.insert_many(tw_response['data'])
+            self.db_instance.insert_many(tw_response['data'], 'tweet')
+            self.db_instance.insert_many(tw_response['includes']['users'], 'author')
             if 'next_token' in tw_response['meta']:
                 next_token = tw_response['meta']['next_token']
             else:

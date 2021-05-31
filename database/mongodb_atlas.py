@@ -13,6 +13,10 @@ class MongoDB:
         self.db = client.deeptrust
         self.default_logger = logger.get_logger('mongodb')
 
-    def insert_many(self, record_list):
-        result = self.db.twitter.insert_many(record_list)
-        self.default_logger.info(f'Insert to MongoDB Atlas as {result.inserted_ids}')
+    def insert_many(self, record_list, database: str = 'tweet'):
+        if database == 'tweet':
+            result = self.db.tweet.insert_many(record_list)
+        elif database == 'author':
+            result = self.db.author.insert_many(record_list)
+
+        self.default_logger.info(f'Insert to {database} with ids {result.inserted_ids}')
