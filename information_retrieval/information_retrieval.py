@@ -43,8 +43,8 @@ class TwitterAPIInterface:
         if enhanced_list is None:
             enhanced_list = []
 
-        start_date = (input_date - timedelta(days=d_days))
-        end_date = input_date
+        start_date = (input_date - timedelta(days=1 - d_days))
+        end_date = (input_date + timedelta(days=1))
 
         # Define query metadata
         market_domain = market_domain
@@ -61,8 +61,8 @@ class TwitterAPIInterface:
         query_params = {
             'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
             'expansions':   'author_id',
-            'tweet.fields': 'author_id,context_annotations,conversation_id,created_at,entities,geo,id,lang,public_metrics,referenced_tweets,source,text',
-            'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
+            'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,referenced_tweets,source,text',
+            'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
             'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone().isoformat(),
             'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone().isoformat(),
             'max_results':  max_results,
@@ -307,3 +307,5 @@ class InformationRetrieval:
                 next_token = tw_response['meta']['next_token']
             else:
                 break
+            self.default_logger.info(
+                f"Oldest ID: {tw_response['meta']['oldest_id']} Newest ID: {tw_response['meta']['newest_id']}")

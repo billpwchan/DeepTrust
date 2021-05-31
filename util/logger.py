@@ -7,7 +7,7 @@ from pathlib import Path
 FORMATTER = logging.Formatter("%(asctime)s — %(name)s — %(levelname)s — %(message)s")
 
 Path("./log/").mkdir(parents=True, exist_ok=True)
-LOG_FILE = f"./log/futu_algo_{str(datetime.date.today())}.log"
+LOG_FILE = f"./log/deeptrust_{str(datetime.date.today())}.log"
 
 
 def get_console_handler():
