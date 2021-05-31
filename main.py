@@ -39,7 +39,7 @@ def main():
 
     if args.module == 'IR':
         ir_instance = InformationRetrieval(input_date=args.anomaly_date, ticker=args.ticker)
-        ir_instance.initialize_query()
+        ir_instance.retrieve_tweets()
 
         # tw_instance = TwitterAPIInterface()
         # tw_instance.build_query()

@@ -379,7 +379,7 @@ fabric.properties
 
 # Cython debug symbols
 
-./anomaly_detection/reports/*
-./information_retrieval/news/*
-./config.ini
-./twitter_keys.yaml
+anomaly_detection/reports/*
+information_retrieval/news/*
+config.ini
+twitter_keys.yaml
