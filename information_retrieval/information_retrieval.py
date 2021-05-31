@@ -29,12 +29,13 @@ class TwitterAPIInterface:
 
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
-                    next_token=None, verified: bool = True):
+                    enhanced_list: list,
+                    next_token: str = None, verified: bool = True, max_results: int = 10):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
-        input_date += timedelta(days=1)
-
+        if enhanced_list is None:
+            enhanced_list = []
         market_domain = market_domain
         REMOVE_ADS = '-is:nullcast'
         # THESE ARE ALWAYS THE TRUSTED SOURCE!! -> USED FOR QUERY ENHANCEMENT
@@ -45,13 +46,14 @@ class TwitterAPIInterface:
         ORIGINAL_TWEETS = '-is:retweet'
         # OR {" OR ".join(companies)}
         query_params = {
-            'query':        f'{market_domain} price ({" OR ".join(entity_names)} OR #{ticker} OR ${ticker}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
+            'query':        f'({market_domain} OR price) ({" OR ".join(entity_names)} OR #{ticker} OR ${ticker}{(" OR " + " OR ".join(enhanced_list)) if len(enhanced_list) != 0 else ""}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
             'expansions':   'author_id',
             'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
             'end_time':     datetime(input_date.year, input_date.month, input_date.day).astimezone().isoformat(),
-            'max_results':  10,
+            'max_results':  max_results,
         }
+        print(query_params['query'])
         # Get next page -> Search Pagination in Twitter Dev
         if next_token is not None:
             query_params['next_token'] = next_token
@@ -70,6 +72,8 @@ class TwitterAPIInterface:
         response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
         if response.status_code != 200:
             raise Exception(response.status_code, response.text)
+        # Maximum 300 requests in 15 mins
+        time.sleep(4)
         return response.json()
 
 
@@ -1949,20 +1953,27 @@ class InformationRetrieval:
         # Twitter search for Hashtags in Twitter Verified Accounts
         twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
 
-        tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
-                                                entity_names=entity_names,
-                                                companies=eikon_companies, ticker=self.ticker, verified=True)
-        tw_response = self.tw_instance.tw_search(tw_query)
-
-        # Pseudo-Relevance Feedback Mechanism -> Get Entities identified in Tweets
-        for tweet in tw_response['data']:
-            if 'entities' in tweet:
-                if 'cashtags' in tweet['entities']:
-                    twitter_entities['cashtags'].extend([item['tag'] for item in tweet['entities']['cashtags']])
-                if 'hashtags' in tweet['entities']:
-                    twitter_entities['hashtags'].extend([item['tag'] for item in tweet['entities']['hashtags']])
-                if 'annotations' in tweet['entities']:
-                    twitter_entities['annotations'].extend(
-                        [item['normalized_text'] for item in tweet['entities']['annotations']])
-            print(tweet)
-        print(twitter_entities)
+        for i in range(2):
+            enhanced_list = [f'${cashtag}' for cashtag in twitter_entities['cashtags']] + twitter_entities[
+                'annotations'] + [f'#{hashtag}' for hashtag in twitter_entities['hashtags']]
+            print(f'Query Expansion Keywords from Twitter: {enhanced_list}')
+            twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
+            tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
+                                                    entity_names=entity_names, enhanced_list=enhanced_list,
+                                                    companies=eikon_companies, ticker=self.ticker, verified=True,
+                                                    max_results=50)
+            tw_response = self.tw_instance.tw_search(tw_query)
+            # Pseudo-Relevance Feedback Mechanism -> Get Entities identified in Tweets
+            for tweet in tw_response['data']:
+                if 'entities' in tweet:
+                    if 'cashtags' in tweet['entities']:
+                        twitter_entities['cashtags'].extend([item['tag'] for item in tweet['entities']['cashtags']])
+                    if 'hashtags' in tweet['entities']:
+                        twitter_entities['hashtags'].extend([item['tag'] for item in tweet['entities']['hashtags']])
+                    if 'annotations' in tweet['entities']:
+                        twitter_entities['annotations'].extend(
+                            [item['normalized_text'] for item in tweet['entities']['annotations']])
+            for key, values in twitter_entities.items():
+                twitter_entities[key] = [item[0] for item in
+                                         Counter([entry.lower() for entry in values]).most_common(2)]
+            print(twitter_entities)
