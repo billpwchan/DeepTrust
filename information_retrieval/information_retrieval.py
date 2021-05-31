@@ -6,6 +6,8 @@ from collections import Counter
 from datetime import date, timedelta, datetime
 from pathlib import Path
 from string import punctuation
+
+from database.mongodb_atlas import MongoDB
 from util import logger
 
 import eikon as ek
@@ -32,14 +34,17 @@ class TwitterAPIInterface:
 
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
-                    enhanced_list: list = None,
-                    next_token: str = None, verified: bool = True, max_results: int = 10):
+                    enhanced_list: list = None, next_token: str = None, verified: bool = True, max_results: int = 10,
+                    d_days: int = 7):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
 
         if enhanced_list is None:
             enhanced_list = []
+
+        start_date = (input_date - timedelta(days=d_days))
+        end_date = input_date
 
         # Define query metadata
         market_domain = market_domain
@@ -58,7 +63,8 @@ class TwitterAPIInterface:
             'expansions':   'author_id',
             'tweet.fields': 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,entities,id,location,name,pinned_tweet_id,profile_image_url,protected,public_metrics,url,username,verified,withheld',
-            'end_time':     datetime(input_date.year, input_date.month, input_date.day).astimezone().isoformat(),
+            'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone().isoformat(),
+            'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone().isoformat(),
             'max_results':  max_results,
         }
         TwitterAPIInterface.default_logger.info(f'Twitter Search Query: {query_params["query"]}')
@@ -184,6 +190,7 @@ class InformationRetrieval:
         self.ek_instance = EikonAPIInterface(ek_api_key=config.get('Eikon.Config', 'ek_api_key'),
                                              open_permid=config.get('Eikon.Config', 'open_permid'))
         self.tw_instance = TwitterAPIInterface(bearer_token=config.get('Twitter.Config', 'bearer_token'))
+        self.db_instance = MongoDB()
         self.input_date = input_date
         self.ticker = ticker
         self.ric = self.ek_instance.get_ric_symbology(self.ticker)
@@ -279,7 +286,7 @@ class InformationRetrieval:
             twitter_enhanced_list.extend([f'${cashtag}' for cashtag in twitter_entities['cashtags']] + twitter_entities[
                 'annotations'] + [f'#{hashtag}' for hashtag in twitter_entities['hashtags']])
             twitter_enhanced_list = list(set(twitter_enhanced_list))
-            if original_enhanced_list == twitter_enhanced_list:
+            if Counter(original_enhanced_list) == Counter(twitter_enhanced_list):
                 self.default_logger.info("Twitter PRF Complete")
                 break
             self.default_logger.info(f'Query Expansion Keywords from Twitter: {twitter_enhanced_list}')
@@ -288,15 +295,14 @@ class InformationRetrieval:
 
         # Start to retrieve tweets using pagination!
         next_token = None
-        for i in range(2):
+        while True:
             tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
                                                     entity_names=entity_names, enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
-                                                    max_results=10, next_token=next_token)
+                                                    max_results=500, next_token=next_token)
             tw_response = self.tw_instance.tw_search(tw_query)
-
+            self.db_instance.insert_many(tw_response['data'])
             if 'next_token' in tw_response['meta']:
                 next_token = tw_response['meta']['next_token']
             else:
                 break
-            print(tw_response)

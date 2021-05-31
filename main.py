@@ -1,7 +1,6 @@
 import argparse
 import configparser
 from anomaly_detection import *
-from database.mongodb_atlas import mongodb
 from information_retrieval import *
 
 
@@ -23,7 +22,6 @@ def main():
     # Parse Arguments
     args = parser.parse_args()
 
-
     if args.module == 'AD' and \
             (args.ticker is None or args.start_date is None or args.end_date is None or args.ad_method is None):
         parser.error("Anomaly Detection requires --ticker, --start_date, --end_date, --ad_method")
@@ -44,8 +42,6 @@ def main():
 
         # tw_instance = TwitterAPIInterface()
         # tw_instance.build_query()
-
-    mongodb_instance = mongodb()
 
 
 if __name__ == '__main__':
