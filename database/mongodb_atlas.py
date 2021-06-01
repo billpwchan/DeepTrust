@@ -38,13 +38,17 @@ class MongoDB:
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if database == 'tweet':
             try:
-                result = self.db[f'{collection_prefix}_tweet'].insert_many(record_list)
+                result = self.db[f'{collection_prefix}_tweet'].insert_many(record_list, ordered=False,
+                                                                           bypass_document_validation=True)
+                self.default_logger.info(
+                    f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
             except BulkWriteError as e:
-                self.default_logger.warn("e.details['writeErrors']")
+                self.default_logger.warn("Duplicate Entries detected.")
         elif database == 'author':
             try:
-                result = self.db[f'{collection_prefix}_author'].insert_many(record_list)
+                result = self.db[f'{collection_prefix}_author'].insert_many(record_list, ordered=False,
+                                                                            bypass_document_validation=True)
+                self.default_logger.info(
+                    f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
             except BulkWriteError as e:
-                self.default_logger.warn("e.details['writeErrors']")
-
-        self.default_logger.info(f'Insert to {database} with ids {result.inserted_ids}')
+                self.default_logger.warn("Duplicate Entries detected.")
