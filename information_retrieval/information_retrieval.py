@@ -11,7 +11,6 @@ import pandas as pd
 import requests
 from OpenPermID import OpenPermID
 from bs4 import BeautifulSoup
-# file exists
 from tqdm import tqdm, trange
 
 from database.mongodb_atlas import MongoDB
@@ -32,7 +31,8 @@ class TwitterAPIInterface:
         return {"Authorization": f"Bearer {bearer_token}"}
 
     @staticmethod
-    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
+    def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, directors: list,
+                    ticker: str,
                     enhanced_list: list = None, next_token: str = None, verified: bool = True, max_results: int = 10,
                     d_days: int = 7):
         """
@@ -54,7 +54,7 @@ class TwitterAPIInterface:
         INDIVIDUAL_TWEET = '-is:reply'
 
         # Define query keywords
-        query_keywords = entity_names + enhanced_list
+        query_keywords = entity_names + directors + enhanced_list
         query_keywords.extend([f'#{ticker}', f'${ticker}'])
         query_keywords = list(set(query_keywords))
 
@@ -79,16 +79,19 @@ class TwitterAPIInterface:
         Return JSON object with fields 'data', 'includes', 'meta' \n
         Data.Fields = ['source', 'id', 'entities', 'text', 'reply_settings', 'context_annotations', 'public_metrics', 'conversation_id', 'referenced_tweets', 'author_id', 'possibly_sensitive', 'created_at', 'lang'] \n
         Meta.Fields = ['newest_id', 'oldest_id', 'next_token', 'result_count']
+        Maximum 300 requests in 15 mins -> 503 Response
         :param query_params: Use build_query() function to create a Twitter query
         :return:
         """
-        search_url = "https://api.twitter.com/2/tweets/search/all"
-        response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
-        if response.status_code != 200:
-            raise Exception(response.status_code, response.text)
-        # Maximum 300 requests in 15 mins
-        time.sleep(4)
-        return response.json()
+        for retry_limit in range(10):
+            search_url = "https://api.twitter.com/2/tweets/search/all"
+            response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
+            time.sleep(4)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.default_logger.warn(f'{response.status_code}, {response.text}. Retrying...')
+        self.default_logger.error("Twitter Service Unavailable")
 
 
 class EikonAPIInterface:
@@ -149,6 +152,11 @@ class EikonAPIInterface:
         company_names_df, err = ek.get_data(instruments=[ric], fields=["TR.CompanyName", "TR.CommonName"])
         return list(set(company_names_df.iloc[0, :].tolist()))
 
+    @staticmethod
+    def get_directors_names(ric: str) -> list:
+        directors_names_df, err = ek.get_data(instruments=[ric], fields=['TR.OfficerName(RNK=R1:R100)'])
+        return directors_names_df['Officer Name'].tolist()
+
     def get_intelligent_tagging(self, query: str, relevance_threshold: float = 0) -> list:
         """
         Return a list of entities detected using Intelligent Tagging API
@@ -191,6 +199,7 @@ class InformationRetrieval:
                                              open_permid=config.get('Eikon.Config', 'open_permid'))
         self.tw_instance = TwitterAPIInterface(bearer_token=config.get('Twitter.Config', 'bearer_token'))
         self.db_instance = MongoDB()
+        self.db_instance.create_collections(input_date=input_date, ticker=ticker)
         self.input_date = input_date
         self.ticker = ticker
         self.ric = self.ek_instance.get_ric_symbology(self.ticker)
@@ -252,6 +261,9 @@ class InformationRetrieval:
 
         self.default_logger.info(f'Query Expansion Companies from Reuters News: {eikon_companies}')
 
+        eikon_directors = [f'"{item.strip(punctuation)}"' for item in self.ek_instance.get_directors_names(self.ric)]
+        self.default_logger.info(f'Query Expansion Directors from Reuters News: {eikon_directors}')
+
         # Common names used on Twitter to refer the entity
         entity_names = [company.lower() for company in self.ek_instance.get_company_names(self.ric)]
 
@@ -261,7 +273,8 @@ class InformationRetrieval:
 
         while True:
             tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
-                                                    entity_names=entity_names, enhanced_list=twitter_enhanced_list,
+                                                    entity_names=entity_names, directors=eikon_directors,
+                                                    enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
                                                     max_results=500)
             tw_response = self.tw_instance.tw_search(tw_query)
@@ -297,12 +310,13 @@ class InformationRetrieval:
         next_token = None
         while True:
             tw_query = self.tw_instance.build_query(input_date=self.input_date, market_domain='stock',
-                                                    entity_names=entity_names, enhanced_list=twitter_enhanced_list,
+                                                    entity_names=entity_names, directors=eikon_directors,
+                                                    enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
                                                     max_results=500, next_token=next_token)
             tw_response = self.tw_instance.tw_search(tw_query)
-            self.db_instance.insert_many(tw_response['data'], 'tweet')
-            self.db_instance.insert_many(tw_response['includes']['users'], 'author')
+            self.db_instance.insert_many(self.input_date, self.ticker, tw_response['data'], 'tweet')
+            self.db_instance.insert_many(self.input_date, self.ticker, tw_response['includes']['users'], 'author')
             if 'next_token' in tw_response['meta']:
                 next_token = tw_response['meta']['next_token']
             else:
