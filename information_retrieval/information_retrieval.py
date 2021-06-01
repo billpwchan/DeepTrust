@@ -1,14 +1,10 @@
 import configparser
 import json
 import time
-import urllib.parse
 from collections import Counter
-from datetime import date, timedelta, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from string import punctuation
-
-from database.mongodb_atlas import MongoDB
-from util import logger
 
 import eikon as ek
 import pandas as pd
@@ -17,6 +13,9 @@ from OpenPermID import OpenPermID
 from bs4 import BeautifulSoup
 # file exists
 from tqdm import tqdm, trange
+
+from database.mongodb_atlas import MongoDB
+from util import logger
 
 
 class TwitterAPIInterface:
@@ -35,7 +34,7 @@ class TwitterAPIInterface:
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, ticker: str,
                     enhanced_list: list = None, next_token: str = None, verified: bool = True, max_results: int = 10,
-                    d_days: int = 5):
+                    d_days: int = 7):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
@@ -43,7 +42,7 @@ class TwitterAPIInterface:
         if enhanced_list is None:
             enhanced_list = []
 
-        start_date = (input_date - timedelta(days=1 - d_days))
+        start_date = (input_date + timedelta(days=1 - d_days))
         end_date = (input_date + timedelta(days=1))
 
         # Define query metadata
@@ -52,6 +51,7 @@ class TwitterAPIInterface:
         VERIFIED_AUTHOR = 'is:verified' if verified else ''
         LANG_EN = 'lang:en'
         ORIGINAL_TWEETS = '-is:retweet'
+        INDIVIDUAL_TWEET = '-is:reply'
 
         # Define query keywords
         query_keywords = entity_names + enhanced_list
@@ -59,7 +59,7 @@ class TwitterAPIInterface:
         query_keywords = list(set(query_keywords))
 
         query_params = {
-            'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS}',
+            'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS} {INDIVIDUAL_TWEET}',
             'expansions':   'author_id',
             'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,referenced_tweets,source,text',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
