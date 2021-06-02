@@ -383,3 +383,4 @@ anomaly_detection/reports/*
 information_retrieval/news/*
 config.ini
 twitter_keys.yaml
+*.pt
