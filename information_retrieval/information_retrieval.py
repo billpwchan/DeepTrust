@@ -8,6 +8,7 @@ from string import punctuation
 
 import eikon as ek
 import pandas as pd
+import pytz
 import requests
 from OpenPermID import OpenPermID
 from bs4 import BeautifulSoup
@@ -63,8 +64,8 @@ class TwitterAPIInterface:
             'expansions':   'author_id',
             'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,referenced_tweets,source,text',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
-            'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone().isoformat(),
-            'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone().isoformat(),
+            'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(pytz.utc).isoformat(),
+            'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone(pytz.utc).isoformat(),
             'max_results':  max_results,
         }
         TwitterAPIInterface.default_logger.info(f'Twitter Search Query: {query_params["query"]}')
@@ -83,14 +84,15 @@ class TwitterAPIInterface:
         :param query_params: Use build_query() function to create a Twitter query
         :return:
         """
-        for retry_limit in range(10):
+        for retry_limit in range(50):
             search_url = "https://api.twitter.com/2/tweets/search/all"
             response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
-            time.sleep(4)
             if response.status_code == 200:
+                time.sleep(4)
                 return response.json()
             else:
                 self.default_logger.warn(f'{response.status_code}, {response.text}. Retrying...')
+                time.sleep(120)
         self.default_logger.error("Twitter Service Unavailable")
 
 
@@ -102,8 +104,8 @@ class EikonAPIInterface:
 
     @staticmethod
     def get_ric_symbology(ticker: str) -> str:
-        isin = ek.get_symbology(ticker, from_symbol_type='ticker', to_symbol_type='ISIN').loc[ticker, 'ISIN']
-        ric = ek.get_symbology(isin, from_symbol_type='ISIN', to_symbol_type='RIC').loc[isin, 'RIC']
+        cusip = ek.get_symbology(ticker, from_symbol_type='ticker', to_symbol_type='CUSIP').loc[ticker, 'CUSIP']
+        ric = ek.get_symbology(cusip, from_symbol_type='CUSIP', to_symbol_type='RIC').loc[cusip, 'RIC']
         return ric
 
     @staticmethod
@@ -168,6 +170,7 @@ class EikonAPIInterface:
         for retry_limit in range(5):
             try:
                 output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
+                time.sleep(5)
             except:
                 continue
             break
@@ -222,30 +225,30 @@ class InformationRetrieval:
         We should have two versions of query, one for Eikon and one for Twitter with verified accounts
         """
 
-        # eikon_query_entities = self.get_eikon_keywords()
+        eikon_query_entities = self.get_eikon_keywords()
         # FOR TESTING ONLY - OVERRIDE INTELLIGENT TAGGING
-        eikon_query_entities = [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
-                                {'name': 'Linda Rendle', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
-                                {'name': 'holistic solutions', 'relevance': 0.2, 'type': 'IndustryTerm'},
-                                {'name': 'Clorox', 'relevance': 0.2, 'type': 'Company'},
-                                {'name': 'computer peripherals maker', 'relevance': 0.2, 'type': 'IndustryTerm'},
-                                {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
-                                {'name': 'Bracken Darrell', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'Logitech', 'relevance': 0.2, 'type': 'Company'},
-                                {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
-                                {'name': 'Jack AltmanDeal', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'Keeper Tax Inc', 'relevance': 0.8, 'type': 'Company'},
-                                {'name': 'SeibertAcquirer', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'CEO and Crashlytics co-founder', 'relevance': 0.2, 'type': 'Position'},
-                                {'name': 'matrix partners', 'relevance': 0.8, 'type': 'Company'},
-                                {'name': 'Segment president and co-founder', 'relevance': 0.2, 'type': 'Position'},
-                                {'name': 'machine learning', 'relevance': 0.2, 'type': 'Technology'},
-                                {'name': 'Ilya Volodarsky', 'relevance': 0.2, 'type': 'Person'},
-                                {'name': 'foundation capital', 'relevance': 0.8, 'type': 'Company'}]
+        # eikon_query_entities = [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
+        #                         {'name': 'Linda Rendle', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
+        #                         {'name': 'holistic solutions', 'relevance': 0.2, 'type': 'IndustryTerm'},
+        #                         {'name': 'Clorox', 'relevance': 0.2, 'type': 'Company'},
+        #                         {'name': 'computer peripherals maker', 'relevance': 0.2, 'type': 'IndustryTerm'},
+        #                         {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
+        #                         {'name': 'Bracken Darrell', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'Logitech', 'relevance': 0.2, 'type': 'Company'},
+        #                         {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
+        #                         {'name': 'Jack AltmanDeal', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'Keeper Tax Inc', 'relevance': 0.8, 'type': 'Company'},
+        #                         {'name': 'SeibertAcquirer', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'CEO and Crashlytics co-founder', 'relevance': 0.2, 'type': 'Position'},
+        #                         {'name': 'matrix partners', 'relevance': 0.8, 'type': 'Company'},
+        #                         {'name': 'Segment president and co-founder', 'relevance': 0.2, 'type': 'Position'},
+        #                         {'name': 'machine learning', 'relevance': 0.2, 'type': 'Technology'},
+        #                         {'name': 'Ilya Volodarsky', 'relevance': 0.2, 'type': 'Person'},
+        #                         {'name': 'foundation capital', 'relevance': 0.8, 'type': 'Company'}]
 
         # Filter duplicate keywords and URLs -> Select top n keywords for expansion
         eikon_query_keywords = [item[0].strip(punctuation) for item in Counter(
