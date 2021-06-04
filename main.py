@@ -2,6 +2,7 @@ import argparse
 import configparser
 from anomaly_detection import *
 from information_retrieval import *
+from reliability_assessment import *
 
 
 def main():
@@ -40,8 +41,8 @@ def main():
         ir_instance = InformationRetrieval(input_date=args.anomaly_date, ticker=args.ticker)
         ir_instance.retrieve_tweets()
 
-        # tw_instance = TwitterAPIInterface()
-        # tw_instance.build_query()
+    if args.module == 'RA':
+        ra_instance = ReliabilityAssessment()
 
 
 if __name__ == '__main__':
