@@ -145,7 +145,7 @@ class AnomalyDetection:
 
         output_data.to_csv(
             f'./anomaly_detection/reports/{self.ticker}_{self.mode}_anomalies_{start_date}_{end_date}.csv')
-        return [timestamp.date() for timestamp in output_data['date'].tolist()]
+        return [timestamp.date() if type(timestamp) != str else timestamp for timestamp in output_data['date'].tolist()]
 
     def format_anomaly(self, anomaly_list: list) -> dict:
         """
