@@ -34,7 +34,7 @@ class MongoDB:
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
         self.db[f'{collection_prefix}_author'].create_index("id", unique=True)
 
-    def get_all_data(self, input_date: date, ticker: str, database: str = 'tweet'):
+    def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if database == 'tweet':
             self.default_logger.info(f'Retrieve records from database {collection_prefix}')
