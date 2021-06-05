@@ -1,8 +1,8 @@
 import sys
 from functools import reduce
 
-from torch import nn
 import torch.distributed as dist
+from torch import nn
 
 
 def summary(model: nn.Module, file=sys.stdout):
@@ -57,6 +57,7 @@ def grad_norm(model: nn.Module):
         param_norm = p.grad.data.norm(2)
         total_norm += param_norm.item() ** 2
     return total_norm ** 0.5
+
 
 def distributed():
     return dist.is_available() and dist.is_initialized()

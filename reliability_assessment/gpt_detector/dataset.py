@@ -1,7 +1,7 @@
 import json
-import numpy as np
 from typing import List
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm

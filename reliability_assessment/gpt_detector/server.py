@@ -1,13 +1,14 @@
+import json
 import os
+import subprocess
 import sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from multiprocessing import Process
-import subprocess
-from transformers import RobertaForSequenceClassification, RobertaTokenizer
-import json
+from urllib.parse import unquote, urlparse
+
 import fire
 import torch
-from urllib.parse import urlparse, unquote
+from transformers import RobertaForSequenceClassification, RobertaTokenizer
 
 model: RobertaForSequenceClassification = None
 tokenizer: RobertaTokenizer = None

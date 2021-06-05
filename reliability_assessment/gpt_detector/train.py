@@ -18,7 +18,7 @@ from transformers import *
 
 from .dataset import Corpus, EncodedDataset
 from .download import download
-from .utils import summary, distributed
+from .utils import distributed, summary
 
 
 def setup_distributed(port=29500):
@@ -100,7 +100,6 @@ def train(model: nn.Module, optimizer, device: str, loader: DataLoader, desc='Tr
 
     with tqdm(loader, desc=desc, disable=distributed() and dist.get_rank() > 0) as loop:
         for texts, masks, labels in loop:
-
             texts, masks, labels = texts.to(device), masks.to(device), labels.to(device)
             batch_size = texts.shape[0]
 
@@ -117,9 +116,9 @@ def train(model: nn.Module, optimizer, device: str, loader: DataLoader, desc='Tr
             loop.set_postfix(loss=loss.item(), acc=train_accuracy / train_epoch_size)
 
     return {
-        "train/accuracy": train_accuracy,
+        "train/accuracy":   train_accuracy,
         "train/epoch_size": train_epoch_size,
-        "train/loss": train_loss
+        "train/loss":       train_loss
     }
 
 
@@ -158,9 +157,9 @@ def validate(model: nn.Module, device: str, loader: DataLoader, votes=1, desc='V
             loop.set_postfix(loss=loss.item(), acc=validation_accuracy / validation_epoch_size)
 
     return {
-        "validation/accuracy": validation_accuracy,
+        "validation/accuracy":   validation_accuracy,
         "validation/epoch_size": validation_epoch_size,
-        "validation/loss": validation_loss
+        "validation/loss":       validation_loss
     }
 
 
@@ -252,11 +251,11 @@ def run(max_epochs=None,
 
                 model_to_save = model.module if hasattr(model, 'module') else model
                 torch.save(dict(
-                        epoch=epoch,
-                        model_state_dict=model_to_save.state_dict(),
-                        optimizer_state_dict=optimizer.state_dict(),
-                        args=args
-                    ),
+                    epoch=epoch,
+                    model_state_dict=model_to_save.state_dict(),
+                    optimizer_state_dict=optimizer.state_dict(),
+                    args=args
+                ),
                     os.path.join(logdir, "best-model.pt")
                 )
 
@@ -282,7 +281,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     nproc = int(subprocess.check_output([sys.executable, '-c', "import torch;"
-                                         "print(torch.cuda.device_count() if torch.cuda.is_available() else 1)"]))
+                                                               "print(torch.cuda.device_count() if torch.cuda.is_available() else 1)"]))
     if nproc > 1:
         print(f'Launching {nproc} processes ...', file=sys.stderr)
 
