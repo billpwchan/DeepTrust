@@ -23,6 +23,13 @@ detection method.
 python main.py -m AD -t TWTR -sd 04/01/2021 -ed 20/05/2021 --ad_method arima
 ```
 
+Collect correlated tweets from Twitter data stream of `TSLA` (Tesla) regards to a detected financial anomaly on 22 
+Feb 2021. Data will be stored in the MongoDB database as specified in the `config.ini` file.
+```bash
+python main.py -m IR -ad 22/02/2021 -t TSLA
+```
+
+
 ## Future Plans
 
 - [ ] Information Retrieval Modules

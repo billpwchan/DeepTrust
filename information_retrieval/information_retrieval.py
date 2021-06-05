@@ -218,6 +218,9 @@ class InformationRetrieval:
             eikon_query_entities.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.5))
             time.sleep(5)
 
+        with open(f'./information_retrieval/news/{self.ric}_entities_{self.input_date}.json', 'w') as fout:
+            json.dump(eikon_query_entities, fout)
+
         return eikon_query_entities
 
     def retrieve_tweets(self, top_n: int = 10):

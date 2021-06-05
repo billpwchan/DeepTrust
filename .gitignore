@@ -379,8 +379,9 @@ fabric.properties
 
 # Cython debug symbols
 
-anomaly_detection/reports/*
 information_retrieval/news/*
 config.ini
 twitter_keys.yaml
 *.pt
+reliability_assessment/gpt_detector/models/*
+reliability_assessment/grover/models/*
