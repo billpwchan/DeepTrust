@@ -34,6 +34,13 @@ class MongoDB:
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
         self.db[f'{collection_prefix}_author'].create_index("id", unique=True)
 
+    def get_all_data(self, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
+        if database == 'tweet':
+            self.default_logger.info(f'Retrieve records from database {collection_prefix}')
+            return [record for record in
+                    self.db[f'{collection_prefix}_tweet'].find({}, {"_id": 0, "text": 1, "public_metrics": 1})]
+
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if database == 'tweet':

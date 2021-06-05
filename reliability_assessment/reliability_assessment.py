@@ -18,9 +18,6 @@ class NeuralVerifier:
         #                          "./reliability_assessment/gpt_detector/detector-large.pt"])
         os.system(
             'python ./reliability_assessment/gpt_detector/server.py ./reliability_assessment/gpt_detector/detector-large.pt')
-        subprocess.Popen(["python", "./reliability_assessment/gpt_detector/server.py",
-                          "./reliability_assessment/gpt_detector/detector-large.pt"], shell=True,
-                         stdout=subprocess.PIPE)
 
     def __init_gpt_model(self):
         self.gpt_server_thread = threading.Thread()
@@ -43,7 +40,9 @@ class ReliabilityAssessment:
         self.input_date = input_date
         self.ticker = ticker
         self.db_instance = MongoDB()
+        # self.tweets_collection = self.db_instance.get_all_data(self.input_date, self.ticker)
         self.default_logger = logger.get_logger('reliability_assessment')
         self.nv_instance = NeuralVerifier()
 
     def neural_fake_news_detection(self):
+        print("HELLO")
