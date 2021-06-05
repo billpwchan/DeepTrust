@@ -171,6 +171,7 @@ class EikonAPIInterface:
             try:
                 output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
                 time.sleep(5)
+                break
             except:
                 continue
             break
