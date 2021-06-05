@@ -9,10 +9,10 @@ import fire
 import torch
 from urllib.parse import urlparse, unquote
 
-
 model: RobertaForSequenceClassification = None
 tokenizer: RobertaTokenizer = None
 device: str = None
+
 
 def log(*args):
     print(f"[{os.environ.get('RANK', '')}]", *args, file=sys.stderr)
@@ -93,8 +93,9 @@ def main(checkpoint, port=8080, device='cuda' if torch.cuda.is_available() else 
     server = HTTPServer(('0.0.0.0', port), RequestHandler)
 
     # avoid calling CUDA API before forking; doing so in a subprocess is fine.
-    print(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
-    num_workers = int(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
+    # print(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
+    # num_workers = int(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
+    num_workers = 0
 
     if num_workers <= 1:
         serve_forever(server, model, tokenizer, device)
