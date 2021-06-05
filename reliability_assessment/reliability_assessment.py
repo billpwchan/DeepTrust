@@ -58,7 +58,7 @@ class NeuralVerifier:
                     chunk_size = 1000
                     for chunk in r.iter_content(chunk_size=chunk_size):
                         f.write(chunk)
-                self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded", flush=True)
+                self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded")
 
     def detect(self, text, mode: str = 'gpt-2') -> dict:
         if mode == 'gpt-2':

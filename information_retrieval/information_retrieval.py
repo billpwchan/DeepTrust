@@ -1,5 +1,6 @@
 import configparser
 import json
+import sys
 import time
 from collections import Counter
 from datetime import date, datetime, timedelta
@@ -64,7 +65,8 @@ class TwitterAPIInterface:
             'expansions':   'author_id',
             'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,referenced_tweets,source,text',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
-            'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(pytz.utc).isoformat(),
+            'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(
+                pytz.utc).isoformat(),
             'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone(pytz.utc).isoformat(),
             'max_results':  max_results,
         }
@@ -104,6 +106,7 @@ class EikonAPIInterface:
 
     @staticmethod
     def get_ric_symbology(ticker: str) -> str:
+        print(ek.get_symbology(ticker, from_symbol_type='ticker'))
         cusip = ek.get_symbology(ticker, from_symbol_type='ticker', to_symbol_type='CUSIP').loc[ticker, 'CUSIP']
         ric = ek.get_symbology(cusip, from_symbol_type='CUSIP', to_symbol_type='RIC').loc[cusip, 'RIC']
         return ric
@@ -138,12 +141,13 @@ class EikonAPIInterface:
                 for retry_limit in range(5):
                     try:
                         news_story = ek.get_news_story(story_id=story_id)
-                        time.sleep(5)
+                        time.sleep(1)
                         soup = BeautifulSoup(news_story, "lxml")
                         output_news.loc[len(output_news.index)] = [soup.get_text(strip=True)]
+                        break
                     except:
+                        print("Unexpected error:", sys.exc_info()[0])
                         continue
-                    break
             output_news.to_csv(f'./information_retrieval/news/{ric}_stories_{input_date}.csv', encoding='utf-8')
         else:
             output_news = pd.read_csv(file_path, index_col=0, header=0)
@@ -166,15 +170,18 @@ class EikonAPIInterface:
         :param relevance_threshold: the minimum relevance needed for an entity to be included in the enhanced keyword list
         :return: a list of dictionaries with {'name', 'relevance', 'type'} attributes
         """
+        if len(query) == 0:
+            return []
         output, err = None, None
         for retry_limit in range(5):
             try:
-                output, err = self.opid.calais(query, language='English', contentType='raw', outputFormat='json')
-                time.sleep(5)
+                output, err = self.opid.calais(query.encode('utf-8'), language='English', contentType='raw',
+                                               outputFormat='json')
+                time.sleep(1)
                 break
             except:
+                print("Unexpected error:", sys.exc_info()[0])
                 continue
-            break
         enhanced_term_list = []
         if err is None and output is not None:
             news_parsed = json.loads(output)
@@ -230,29 +237,6 @@ class InformationRetrieval:
         """
 
         eikon_query_entities = self.get_eikon_keywords()
-        # FOR TESTING ONLY - OVERRIDE INTELLIGENT TAGGING
-        # eikon_query_entities = [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
-        #                         {'name': 'Linda Rendle', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
-        #                         {'name': 'holistic solutions', 'relevance': 0.2, 'type': 'IndustryTerm'},
-        #                         {'name': 'Clorox', 'relevance': 0.2, 'type': 'Company'},
-        #                         {'name': 'computer peripherals maker', 'relevance': 0.2, 'type': 'IndustryTerm'},
-        #                         {'name': 'CEO', 'relevance': 0.2, 'type': 'Position'},
-        #                         {'name': 'Bracken Darrell', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'Logitech', 'relevance': 0.2, 'type': 'Company'},
-        #                         {'name': 'Jim Cramer', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'Mad Money', 'relevance': 0.2, 'type': 'TVShow'},
-        #                         {'name': 'Jack AltmanDeal', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'Keeper Tax Inc', 'relevance': 0.8, 'type': 'Company'},
-        #                         {'name': 'SeibertAcquirer', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'CEO and Crashlytics co-founder', 'relevance': 0.2, 'type': 'Position'},
-        #                         {'name': 'matrix partners', 'relevance': 0.8, 'type': 'Company'},
-        #                         {'name': 'Segment president and co-founder', 'relevance': 0.2, 'type': 'Position'},
-        #                         {'name': 'machine learning', 'relevance': 0.2, 'type': 'Technology'},
-        #                         {'name': 'Ilya Volodarsky', 'relevance': 0.2, 'type': 'Person'},
-        #                         {'name': 'foundation capital', 'relevance': 0.8, 'type': 'Company'}]
 
         # Filter duplicate keywords and URLs -> Select top n keywords for expansion
         eikon_query_keywords = [item[0].strip(punctuation) for item in Counter(
