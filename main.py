@@ -30,6 +30,9 @@ def main():
     if args.module == 'IR' and (args.ticker is None or args.anomaly_date is None):
         parser.error("Information Retrieval requires --ticker, --anomaly_date")
 
+    if args.module == 'RA' and (args.ticker is None or args.anomaly_date is None):
+        parser.error("Reliability Assessment requires --ticker, --anomaly_date")
+
     if args.module == 'AD':
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
         ad_instance.train()
@@ -42,7 +45,7 @@ def main():
         ir_instance.retrieve_tweets()
 
     if args.module == 'RA':
-        ra_instance = ReliabilityAssessment()
+        ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
 
 
 if __name__ == '__main__':

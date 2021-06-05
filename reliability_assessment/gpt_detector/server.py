@@ -93,6 +93,7 @@ def main(checkpoint, port=8080, device='cuda' if torch.cuda.is_available() else 
     server = HTTPServer(('0.0.0.0', port), RequestHandler)
 
     # avoid calling CUDA API before forking; doing so in a subprocess is fine.
+    print(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
     num_workers = int(subprocess.check_output([sys.executable, '-c', 'import torch; print(torch.cuda.device_count())']))
 
     if num_workers <= 1:
