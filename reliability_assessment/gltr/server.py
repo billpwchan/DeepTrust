@@ -119,7 +119,7 @@ def send_data(path):
 app.add_api('server.yaml')
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default='gpt-2-small')
+parser.add_argument("--model", default='gpt-2-large')
 parser.add_argument("--nodebug", default=True)
 parser.add_argument("--address",
                     default="127.0.0.1")  # 0.0.0.0 for nonlocal use

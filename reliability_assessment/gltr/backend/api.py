@@ -67,9 +67,9 @@ def top_k_logits(logits, k):
                        logits)
 
 
-@register_api(name='gpt-2-small')
+@register_api(name='gpt-2-large')
 class LM(AbstractLanguageChecker):
-    def __init__(self, model_name_or_path="gpt2"):
+    def __init__(self, model_name_or_path="gpt2-large"):
         super(LM, self).__init__()
         self.enc = GPT2Tokenizer.from_pretrained(model_name_or_path)
         self.model = GPT2LMHeadModel.from_pretrained(model_name_or_path)
@@ -121,8 +121,8 @@ class LM(AbstractLanguageChecker):
 
         pred_topk = [[(self.postprocess(t[0]), t[1]) for t in pred] for pred in pred_topk]
         payload = {'bpe_strings': bpe_strings,
-                   'real_topk': real_topk,
-                   'pred_topk': pred_topk}
+                   'real_topk':   real_topk,
+                   'pred_topk':   pred_topk}
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
@@ -133,7 +133,6 @@ class LM(AbstractLanguageChecker):
         Sample `length` words from the model.
         Code strongly inspired by
         https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_gpt2.py
-
         '''
         context = torch.full((1, 1),
                              self.enc.encoder[self.start_token],
@@ -186,7 +185,7 @@ class LM(AbstractLanguageChecker):
 
 @register_api(name='BERT')
 class BERTLM(AbstractLanguageChecker):
-    def __init__(self, model_name_or_path="bert-base-cased"):
+    def __init__(self, model_name_or_path="bert-large-cased"):
         super(BERTLM, self).__init__()
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
@@ -219,7 +218,6 @@ class BERTLM(AbstractLanguageChecker):
         y = torch.tensor([y_toks]).to(self.device)
         segments_tensor = torch.tensor([segments_ids]).to(self.device)
 
-        # TODO batching...
         # Create batches of (x,y)
         input_batches = []
         target_batches = []
@@ -295,8 +293,8 @@ class BERTLM(AbstractLanguageChecker):
         bpe_strings = [self.postprocess(s) for s in tokenized_text]
         pred_topk = [[(self.postprocess(t[0]), t[1]) for t in pred] for pred in pred_topk]
         payload = {'bpe_strings': bpe_strings,
-                   'real_topk': real_topk,
-                   'pred_topk': pred_topk}
+                   'real_topk':   real_topk,
+                   'pred_topk':   pred_topk}
         return payload
 
     def postprocess(self, token):
