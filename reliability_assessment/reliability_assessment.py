@@ -24,6 +24,9 @@ class NeuralVerifier:
         time.sleep(10)
         self.default_logger.info("GPT-2 Neural Verifier Initialized")
 
+    def __init_grover_model(self):
+        print("Yeahp")
+
     def __download_models(self, mode: str = 'gpt-2'):
         if mode == 'gpt-2':
             dir_prefix = "./reliability_assessment/gpt_detector/models/"

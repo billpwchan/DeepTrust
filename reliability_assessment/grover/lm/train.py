@@ -17,8 +17,8 @@
 
 import tensorflow as tf
 
-from lm.dataloader import input_fn_builder
-from lm.modeling import model_fn_builder, GroverConfig
+from dataloader import input_fn_builder
+from modeling import model_fn_builder, GroverConfig
 
 flags = tf.flags
 
