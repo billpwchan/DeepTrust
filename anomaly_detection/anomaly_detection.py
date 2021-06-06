@@ -18,6 +18,7 @@ class AnomalyDetection:
         self.ticker = ticker
         self.time_series_df = pd.DataFrame()
         self.time_series_df = AnomalyDetection.__get_data(self.ticker)
+        self.time_series_df.dropna(inplace=True)
         self.price_vals = self.time_series_df['close'].values
         self.price_log = np.log10(self.price_vals)
 

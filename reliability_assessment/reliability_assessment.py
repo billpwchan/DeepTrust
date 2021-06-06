@@ -48,17 +48,21 @@ class NeuralVerifier:
             model_type = 'discrimination'
 
             for ext in ['data-00000-of-00001', 'index', 'meta']:
-                r = requests.get(
-                    f'https://storage.googleapis.com/grover-models/{model_type}/generator=mega~discriminator=grover~discsize=mega~dataset=p=0.94/model.ckpt-1562.{ext}',
-                    stream=True)
-                with open(f'{dir_prefix}model.ckpt-1562.{ext}', 'wb') as f:
-                    file_size = int(r.headers["content-length"])
-                    if file_size < 1000:
-                        raise ValueError("File doesn't exist? idk")
-                    chunk_size = 1000
-                    for chunk in r.iter_content(chunk_size=chunk_size):
-                        f.write(chunk)
-                self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded")
+                model_path = pathlib.Path(f'{dir_prefix}model.ckpt-1562.{ext}')
+                if not model_path.exists():
+                    r = requests.get(
+                        f'https://storage.googleapis.com/grover-models/{model_type}/generator=mega~discriminator=grover~discsize=mega~dataset=p=0.94/model.ckpt-1562.{ext}',
+                        stream=True)
+                    with open(f'{dir_prefix}model.ckpt-1562.{ext}', 'wb') as f:
+                        file_size = int(r.headers["content-length"])
+                        if file_size < 1000:
+                            raise ValueError("File doesn't exist? idk")
+                        chunk_size = 1000
+                        for chunk in r.iter_content(chunk_size=chunk_size):
+                            f.write(chunk)
+                    self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded")
+                else:
+                    self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
 
     def detect(self, text, mode: str = 'gpt-2') -> dict:
         if mode == 'gpt-2':
