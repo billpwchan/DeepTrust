@@ -78,7 +78,7 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
     train_op = tf.group(train_op, [global_step.assign(new_global_step)])
 
     train_metrics = {
-        'learning_rate': learning_rate,
+        'learning_rate':  learning_rate,
         'minibatch_loss': loss,
         # 'minibatch_ppl': tf.math.exp(loss),
     }

@@ -185,8 +185,8 @@ def main(_):
             # This little hack is because we don't want to tokenize the article twice
             context_ids = _flatten_and_tokenize_metadata(encoder=encoder, item=item)
             examples[item['split']].append({
-                'info': item,
-                'ids': context_ids,
+                'info':  item,
+                'ids':   context_ids,
                 'label': item['label'],
             })
             assert item['label'] in LABEL_INV_MAP
@@ -200,8 +200,8 @@ def main(_):
                 # This little hack is because we don't want to tokenize the article twice
                 context_ids = _flatten_and_tokenize_metadata(encoder=encoder, item=item)
                 additional_data[item['label']].append({
-                    'info': item,
-                    'ids': context_ids,
+                    'info':  item,
+                    'ids':   context_ids,
                     'label': item['label'],
                 })
 

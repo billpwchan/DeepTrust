@@ -173,8 +173,8 @@ def _tokenize_article_pieces(encoder, item):
     """
     article_pieces = {
         'article': [encoder.begin_article] + encoder.encode(item['text']) + [encoder.end_article],
-        'domain': [encoder.begin_domain] + encoder.encode(item['domain']) + [encoder.end_domain],
-        'title': [encoder.begin_title] + encoder.encode(item['title']) + [encoder.end_title],
+        'domain':  [encoder.begin_domain] + encoder.encode(item['domain']) + [encoder.end_domain],
+        'title':   [encoder.begin_title] + encoder.encode(item['title']) + [encoder.end_title],
     }
     # 4/6: Attach the summary too, why the hell not
     if item['summary'] and len(item['summary']) > 50:
@@ -392,8 +392,8 @@ def extract_generated_target(output_tokens, encoder, target):
 
     return {
         'extraction': encoder.decode(output_tokens[start_ind:end_ind]),
-        'start_ind': start_ind,
-        'end_ind': end_ind,
+        'start_ind':  start_ind,
+        'end_ind':    end_ind,
     }
 
 

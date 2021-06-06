@@ -7,6 +7,7 @@ Import all classes in this directory so that classes with
 
 from os.path import basename, dirname, join
 from glob import glob
+
 pwd = dirname(__file__)
 for x in glob(join(pwd, '*.py')):
     if not basename(x).startswith('__'):

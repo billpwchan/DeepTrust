@@ -37,12 +37,12 @@ def analyze(analyze_request):
 
     res = {}
     if project in projects:
-        p = projects[project] # type: Project
+        p = projects[project]  # type: Project
         res = p.lm.check_probabilities(text, topk=20)
 
     return {
         "request": {'project': project, 'text': text},
-        "result": res
+        "result":  res
     }
 
 

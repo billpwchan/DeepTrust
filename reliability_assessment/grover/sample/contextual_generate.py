@@ -145,9 +145,9 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess, \
         for chunk_i in range(num_chunks):
             tokens_out, probs_out = sess.run([tokens, probs],
                                              feed_dict={initial_context: [context_formatted] * batch_size_per_chunk,
-                                                        eos_token: encoder.__dict__['end_{}'.format(args.target)],
-                                                        ignore_ids: ignore_ids_np,
-                                                        p_for_topp: top_p[chunk_i]})
+                                                        eos_token:       encoder.__dict__['end_{}'.format(args.target)],
+                                                        ignore_ids:      ignore_ids_np,
+                                                        p_for_topp:      top_p[chunk_i]})
 
             for t_i, p_i in zip(tokens_out, probs_out):
                 extraction = extract_generated_target(output_tokens=t_i, encoder=encoder, target=args.target)

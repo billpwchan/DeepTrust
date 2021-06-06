@@ -1,1 +1,1 @@
-from . information_retrieval import *
+from .information_retrieval import *

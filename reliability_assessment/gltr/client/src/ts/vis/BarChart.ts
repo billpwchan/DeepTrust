@@ -1,7 +1,7 @@
-import { VComponent } from "./VisComponent" 
-import { D3Sel } from "../etc/Util";
-import { SimpleEventHandler } from "../etc/SimpleEventHandler";
-import { tickStep } from "d3";
+import {VComponent} from "./VisComponent"
+import {D3Sel} from "../etc/Util";
+import {SimpleEventHandler} from "../etc/SimpleEventHandler";
+import {tickStep} from "d3";
 import * as d3 from "d3";
 
 
@@ -12,17 +12,16 @@ export type BarChartData = {
     colors?: string[]
 }
 
-export class BarChart extends VComponent<BarChartData>{
+export class BarChart extends VComponent<BarChartData> {
+    highlightLabel: d3.Selection<SVGTextElement, any, any, any>;
     protected options = {
         width: 200,
         height: 150,
         margin_top: 10,
         numberFormat: d3.format('.3')
     };
-
     protected css_name = "barchartX";
     protected _current = {};
-    highlightLabel: d3.Selection<SVGTextElement, any, any, any>;
 
     constructor(parent: D3Sel, eventHandler?: SimpleEventHandler, options = {}) {
         super(parent, eventHandler);
@@ -32,7 +31,7 @@ export class BarChart extends VComponent<BarChartData>{
 
     protected _init() {
         const op = this.options;
-        this.parent.attrs({ width: op.width, height: op.height });
+        this.parent.attrs({width: op.width, height: op.height});
 
         this.layers.bg.append('g')
             .attr('class', 'y-axis')
@@ -62,7 +61,7 @@ export class BarChart extends VComponent<BarChartData>{
         const colorValue = (index: number) => rd.colors ? (rd.colors[index % rd.colors.length]) : null;
 
 
-        const allData = rd.values.map((v, i) => ({ v, c: colorValue(i) }))
+        const allData = rd.values.map((v, i) => ({v, c: colorValue(i)}))
 
         this.layers.main.selectAll('.bar').data(allData)
             .join('rect')
@@ -75,7 +74,7 @@ export class BarChart extends VComponent<BarChartData>{
             })
             .style('fill', d => d.c)
             .style('opacity', 1)
-            .on('mouseenter', (d,i) => {
+            .on('mouseenter', (d, i) => {
                 const x = xScale(i) + .5 * width;
                 const y = yScale(d.v) - 2;
 

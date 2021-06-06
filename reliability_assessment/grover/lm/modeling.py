@@ -364,7 +364,7 @@ def _top_p_sample(logits, ignore_ids=None, num_samples=1, p=0.9):
             # Don't do top-p sampling in this case
             print("Top-p sampling DISABLED", flush=True)
             return {
-                'probs': probs,
+                'probs':  probs,
                 'sample': tf.random.categorical(
                     logits=logits if ignore_ids is None else logits - tf.cast(ignore_ids[None], tf.float32) * 1e10,
                     num_samples=num_samples, dtype=tf.int32),
@@ -392,7 +392,7 @@ def _top_p_sample(logits, ignore_ids=None, num_samples=1, p=0.9):
         # sample = tf.random.categorical(logits=logits_to_use, num_samples=num_samples, dtype=tf.int32)
 
     return {
-        'probs': probs,
+        'probs':  probs,
         'sample': sample,
     }
 
@@ -427,7 +427,7 @@ def _top_k_sample(logits, ignore_ids=None, num_samples=1, k=10):
         sample = tf.batch_gather(indices, sample_perm)
 
     return {
-        'probs': probs,
+        'probs':  probs,
         'sample': sample,
     }
 
@@ -691,11 +691,11 @@ def model_fn_builder(config: GroverConfig, init_checkpoint, learning_rate,
 
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
-                predictions={'gt_logprobs': gt_logprobs,
+                predictions={'gt_logprobs':    gt_logprobs,
                              'top_p_required': top_p_required,
-                             'predictions': predictions,
-                             'pred_logprobs': pred_logprobs,
-                             'labels': input_ids},
+                             'predictions':    predictions,
+                             'pred_logprobs':  pred_logprobs,
+                             'labels':         input_ids},
                 scaffold_fn=scaffold_fn)
         return output_spec
 
@@ -742,8 +742,8 @@ def sample_step(tokens, ignore_ids, news_config, batch_size=1, p_for_topp=0.95, 
     new_probs = tf.squeeze(tf.batch_gather(sample_info['probs'], sample_info['sample']), 1)
     return {
         'new_tokens': new_tokens,
-        'new_probs': new_probs,
-        'new_cache': model.new_kvs,
+        'new_probs':  new_probs,
+        'new_cache':  model.new_kvs,
     }
 
 
@@ -755,8 +755,8 @@ def initialize_from_context(initial_context, ignore_ids, news_config, p_for_topp
                                  batch_size=batch_size, p_for_topp=p_for_topp, cache=None, do_topk=do_topk)
     return {
         'tokens': tf.concat([initial_context, context_output['new_tokens'][:, None]], 1),
-        'cache': context_output['new_cache'],
-        'probs': context_output['new_probs'][:, None]
+        'cache':  context_output['new_cache'],
+        'probs':  context_output['new_probs'][:, None]
     }
 
 
@@ -926,7 +926,7 @@ def classification_model_fn_builder(config: GroverConfig, init_checkpoint, learn
                 loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
                 return {
                     "eval_accuracy": accuracy,
-                    "eval_loss": loss,
+                    "eval_loss":     loss,
                 }
 
             eval_metrics = (metric_fn,
@@ -940,7 +940,7 @@ def classification_model_fn_builder(config: GroverConfig, init_checkpoint, learn
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={'logits': logits,
-                             'probs': tf.nn.softmax(logits, axis=-1)},
+                             'probs':  tf.nn.softmax(logits, axis=-1)},
                 scaffold_fn=scaffold_fn)
         return output_spec
 

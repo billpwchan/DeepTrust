@@ -106,7 +106,7 @@ def classification_convert_examples_to_features(
             if chop_from_front_if_needed:
                 tokens = tokens[-max_seq_length:]
             else:
-                tokens = example['ids'][:(max_seq_length-1)] + [encoder.begin_summary]
+                tokens = example['ids'][:(max_seq_length - 1)] + [encoder.begin_summary]
         elif len(tokens) < max_seq_length:
             tokens.extend([encoder.padding] * (max_seq_length - len(tokens)))
 
@@ -120,7 +120,7 @@ def classification_convert_examples_to_features(
     if pad_extra_examples:
         for x in range(len(examples) % batch_size):
             features = collections.OrderedDict()
-            features['input_ids'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[0]*max_seq_length))
+            features['input_ids'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[0] * max_seq_length))
             features['label_ids'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[0]))
             features['is_real_example'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[0]))
             tf_example = tf.train.Example(features=tf.train.Features(feature=features))
@@ -134,8 +134,8 @@ def classification_input_fn_builder(input_file, seq_length, is_training,
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
     name_to_features = {
-        "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
-        "label_ids": tf.FixedLenFeature([], tf.int64),
+        "input_ids":       tf.FixedLenFeature([seq_length], tf.int64),
+        "label_ids":       tf.FixedLenFeature([], tf.int64),
         "is_real_example": tf.FixedLenFeature([], tf.int64),
     }
 

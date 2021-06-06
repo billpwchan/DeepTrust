@@ -4,12 +4,6 @@
 
 export default class URLHandler {
 
-    static basicURL() {
-        const url_path = window.location.pathname.split('/').slice(0, -2).join('/');
-
-        return window.location.origin + (url_path.length ? url_path : '');
-    }
-
     /**
      * Read all URL parameters into a map.
      * @returns {Map} the url parameters as a key-value store (ES6 map)
@@ -62,6 +56,11 @@ export default class URLHandler {
 
     }
 
+    static basicURL() {
+        const url_path = window.location.pathname.split('/').slice(0, -2).join('/');
+
+        return window.location.origin + (url_path.length ? url_path : '');
+    }
 
     /**
      * Generates an URL string from a map of url parameters

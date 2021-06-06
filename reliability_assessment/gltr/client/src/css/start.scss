@@ -13,7 +13,7 @@ a {
   color: inherit;
 }
 
-textarea{
+textarea {
   font-family: inherit;
 }
 
@@ -36,7 +36,7 @@ button {
     border: #2a9eff 3px solid;
   }
 
-  &.inactive{
+  &.inactive {
     opacity: .5;
     pointer-events: none;
   }
@@ -165,7 +165,7 @@ select {
   //background: #ffffff;
   overflow-x: hidden;
   overflow-y: auto;
-  width:100%;
+  width: 100%;
 }
 
 .floating_content {
@@ -256,12 +256,16 @@ select {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 
-#all_result{
+#all_result {
   display: flex;
   flex-flow: column;
 }
@@ -271,19 +275,20 @@ select {
 //   top:50px;
 //   left:0; 
 
-  
+
 // }
 
-@media (min-width: 768px){
-  .floating_content{
+@media (min-width: 768px) {
+  .floating_content {
     width: 750px;
+  }
 }
-}
+
 @media (max-width: 500px) {
-  #stats{
+  #stats {
     order: 2;
   }
-  #res{
+  #res {
     order: 1;
   }
 }

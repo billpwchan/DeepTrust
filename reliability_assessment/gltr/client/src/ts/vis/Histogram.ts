@@ -1,8 +1,8 @@
-import { VComponent } from "./VisComponent";
-import { D3Sel } from "../etc/Util";
-import { SimpleEventHandler } from "../etc/SimpleEventHandler";
+import {VComponent} from "./VisComponent";
+import {D3Sel} from "../etc/Util";
+import {SimpleEventHandler} from "../etc/SimpleEventHandler";
 import * as d3 from "d3";
-import { schemeDark2 } from "d3";
+import {schemeDark2} from "d3";
 
 export type HistogramData = {
     data: number[],
@@ -13,6 +13,7 @@ export type HistogramData = {
 
 
 export class Histogram extends VComponent<HistogramData> {
+    highlightLabel: d3.Selection<SVGTextElement, any, any, any>;
     protected _current = {};
     protected css_name = 'HistogramX';
     protected options = {
@@ -21,7 +22,6 @@ export class Histogram extends VComponent<HistogramData> {
         margin_top: 10,
         numberFormat: d3.format('.3')
     };
-    highlightLabel: d3.Selection<SVGTextElement, any, any, any>;
 
     constructor(d3Parent: D3Sel, eventHandler?: SimpleEventHandler, options: {} = {}) {
         super(d3Parent, eventHandler);

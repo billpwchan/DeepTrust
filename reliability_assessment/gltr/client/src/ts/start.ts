@@ -33,7 +33,7 @@ const mapIDtoEnum = {
 
 window.onload = () => {
     const eventHandler = new SimpleEventHandler(<Element>d3.select('body').node());
-    if (URLHandler.parameters['nodemo']){
+    if (URLHandler.parameters['nodemo']) {
         current.demo = false;
 
 
@@ -90,7 +90,7 @@ window.onload = () => {
     if (current.demo) {
 
         // d3.json('demo/examples.json').then(
-        const all_demos: { file: string, description: string, api: AnalyzeResponse }[] = require('../demo/'+current.project_name+'_examples.json')
+        const all_demos: { file: string, description: string, api: AnalyzeResponse }[] = require('../demo/' + current.project_name + '_examples.json')
 
 
         const load_demo = d => {
@@ -297,7 +297,3 @@ window.onload = () => {
 
     setup_ui();
 };
-
-
-
-

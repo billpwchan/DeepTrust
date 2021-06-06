@@ -89,61 +89,6 @@ export abstract class VComponent<DataInterface> {
     //
     // }
 
-    protected superInitHTML(options: {} = {}) {
-        Object.keys(options).forEach(key => this.options[key] = options[key]);
-        this.base = this.parent.append('div')
-            .classed(this.css_name, true)
-
-    }
-
-
-    /**
-     * Has to be called as last call in subclass constructor.
-     * @param {{}} options
-     * @param defaultLayers -- create the default <g> layers: bg -> main -> fg
-     */
-    protected superInitSVG(options: {} = {}, defaultLayers = ['bg', 'main', 'fg']) {
-        // Set default options if not specified in constructor call
-        // const defaults = this.defaultOptions;
-        // this.options = {};
-        // const keys = new Set([...Object.keys(defaults), ...Object.keys(options)]);
-        // keys.forEach(key => this.options[key] = (key in options) ? options[key] : defaults[key]);
-        Object.keys(options).forEach(key => this.options[key] = options[key]);
-
-
-        this.layers = {};
-
-        // Create the base group element
-        this.base = SVG.group(this.parent,
-            this.css_name + ' ID' + this.id,
-            this.options.pos);
-
-
-        // create default layers: background, main, foreground
-        if (defaultLayers) {
-            // construction order is important !
-            defaultLayers.forEach(layer =>{
-                this.layers[layer] = SVG.group(this.base, layer);
-            });
-
-            // this.layers.bg = SVG.group(this.base, 'bg');
-            // this.layers.main = SVG.group(this.base, 'main');
-            // this.layers.fg = SVG.group(this.base, 'fg');
-        }
-
-
-    }
-
-
-    /**
-     * Should be overwritten to create the static DOM elements
-     * @abstract
-     * @return {*} ---
-     */
-    protected abstract _init();
-
-    // DATA UPDATE & RENDER ============================================================
-
     /**
      * Every time data has changed, update is called and
      * triggers wrangling and re-rendering
@@ -157,26 +102,6 @@ export abstract class VComponent<DataInterface> {
         this._render(this.renderData);
     }
 
-
-    /**
-     * Data wrangling method -- implement in subclass. Returns this.renderData.
-     * Simplest implementation: `return data;`
-     * @param {Object} data data
-     * @returns {*} -- data in render format
-     * @abstract
-     */
-    protected abstract _wrangle(data);
-
-
-    /**
-     * Is responsible for mapping data to DOM elements
-     * @param {Object} renderData pre-processed (wrangled) data
-     * @abstract
-     * @returns {*} ---
-     */
-    protected abstract _render(renderData): void;
-
-
     // UPDATE OPTIONS ============================================================
     /**
      * Updates instance options
@@ -189,13 +114,11 @@ export abstract class VComponent<DataInterface> {
         if (reRender) this._render(this.renderData);
     }
 
-
-    // === CONVENIENCE ====
-
-
     setHideElement(hE: D3Sel) {
         this._visibility.hideElement = hE;
     }
+
+    // DATA UPDATE & RENDER ============================================================
 
     hideView() {
         if (!this._visibility.hidden) {
@@ -226,5 +149,75 @@ export abstract class VComponent<DataInterface> {
         this.base.remove();
     }
 
-}
+    protected superInitHTML(options: {} = {}) {
+        Object.keys(options).forEach(key => this.options[key] = options[key]);
+        this.base = this.parent.append('div')
+            .classed(this.css_name, true)
 
+    }
+
+
+    // === CONVENIENCE ====
+
+    /**
+     * Has to be called as last call in subclass constructor.
+     * @param {{}} options
+     * @param defaultLayers -- create the default <g> layers: bg -> main -> fg
+     */
+    protected superInitSVG(options: {} = {}, defaultLayers = ['bg', 'main', 'fg']) {
+        // Set default options if not specified in constructor call
+        // const defaults = this.defaultOptions;
+        // this.options = {};
+        // const keys = new Set([...Object.keys(defaults), ...Object.keys(options)]);
+        // keys.forEach(key => this.options[key] = (key in options) ? options[key] : defaults[key]);
+        Object.keys(options).forEach(key => this.options[key] = options[key]);
+
+
+        this.layers = {};
+
+        // Create the base group element
+        this.base = SVG.group(this.parent,
+            this.css_name + ' ID' + this.id,
+            this.options.pos);
+
+
+        // create default layers: background, main, foreground
+        if (defaultLayers) {
+            // construction order is important !
+            defaultLayers.forEach(layer => {
+                this.layers[layer] = SVG.group(this.base, layer);
+            });
+
+            // this.layers.bg = SVG.group(this.base, 'bg');
+            // this.layers.main = SVG.group(this.base, 'main');
+            // this.layers.fg = SVG.group(this.base, 'fg');
+        }
+
+
+    }
+
+    /**
+     * Should be overwritten to create the static DOM elements
+     * @abstract
+     * @return {*} ---
+     */
+    protected abstract _init();
+
+    /**
+     * Data wrangling method -- implement in subclass. Returns this.renderData.
+     * Simplest implementation: `return data;`
+     * @param {Object} data data
+     * @returns {*} -- data in render format
+     * @abstract
+     */
+    protected abstract _wrangle(data);
+
+    /**
+     * Is responsible for mapping data to DOM elements
+     * @param {Object} renderData pre-processed (wrangled) data
+     * @abstract
+     * @returns {*} ---
+     */
+    protected abstract _render(renderData): void;
+
+}

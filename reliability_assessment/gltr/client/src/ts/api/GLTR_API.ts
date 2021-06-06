@@ -7,7 +7,6 @@ import URLHandler from "../etc/URLHandler";
 import {cleanSpecials} from "../etc/Util";
 
 
-
 export type AnalyzedText = {
     bpe_strings: string[],
     real_topk: [number, number][],
@@ -53,4 +52,3 @@ export class GLTR_API {
 
 
 }
-

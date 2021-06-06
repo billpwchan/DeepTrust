@@ -30,7 +30,7 @@ export class SVGMeasurements {
     textLength(text, style = null) {
         this.measureElement.attr('style', style);
         this.measureElement.text(text);
-        const tl = (<SVGTextElement> this.measureElement.node()).getComputedTextLength();
+        const tl = (<SVGTextElement>this.measureElement.node()).getComputedTextLength();
         this.measureElement.text('');
 
         return tl;

@@ -1,6 +1,6 @@
-import { D3Sel, token_cleanup } from "../etc/Util";
-import { SimpleEventHandler } from "../etc/SimpleEventHandler";
-import { GLTR_RenderItem } from "./GLTR_Text_Box";
+import {D3Sel, token_cleanup} from "../etc/Util";
+import {SimpleEventHandler} from "../etc/SimpleEventHandler";
+import {GLTR_RenderItem} from "./GLTR_Text_Box";
 import * as d3 from "d3";
 
 
@@ -12,14 +12,6 @@ export class ToolTip {
         this._init()
     }
 
-
-    private _init() {
-        this.predictions = this.parent.select('.predictions');
-        this.myDetail = this.parent.select('.myDetail');
-
-    }
-
-
     set visility(vis: boolean) {
         if (vis == true) {
             this.parent.style('opacity', 1);
@@ -27,7 +19,6 @@ export class ToolTip {
             this.parent.style('opacity', 0);
         }
     }
-
 
     updateData(ri: GLTR_RenderItem) {
         this.visility = true;
@@ -76,6 +67,12 @@ export class ToolTip {
 
         })
 
+
+    }
+
+    private _init() {
+        this.predictions = this.parent.select('.predictions');
+        this.myDetail = this.parent.select('.myDetail');
 
     }
 

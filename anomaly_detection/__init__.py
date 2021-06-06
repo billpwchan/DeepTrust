@@ -1,1 +1,1 @@
-from . anomaly_detection import *
+from .anomaly_detection import *

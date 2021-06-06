@@ -151,6 +151,7 @@ def main(_):
 
     estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
 
+
 if __name__ == "__main__":
     flags.mark_flag_as_required("input_file")
     flags.mark_flag_as_required("output_dir")

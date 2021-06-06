@@ -13,6 +13,9 @@ export type GLTR_RenderItem = { top: number; prop: number; others: [string, numb
 export type GLTR_HoverEvent = { hovered: boolean, d: GLTR_RenderItem }
 
 export class GLTR_Text_Box extends VComponent<AnalyzedText> {
+    static events = {
+        tokenHovered: 'lmf-view-token-hovered'
+    }
     protected _current = {
         maxValue: -1,
     };
@@ -30,11 +33,6 @@ export class GLTR_Text_Box extends VComponent<AnalyzedText> {
         ])
     };
 
-    static events = {
-        tokenHovered: 'lmf-view-token-hovered'
-    }
-
-
     constructor(parent: D3Sel, eventHandler?: SimpleEventHandler, options = {}) {
         super(parent, eventHandler);
         this.superInitHTML(options);
@@ -42,11 +40,29 @@ export class GLTR_Text_Box extends VComponent<AnalyzedText> {
 
     }
 
+    public get colorStats() {
+        const res: { [key: string]: number } = {};
+        this.options.topkScale.range().forEach(c => res[c] = 0);
+        this.data.real_topk.map(d => d[0]).forEach(x => {
+            const c = this.options.topkScale(x);
+            res[c] += 1;
+        })
+
+        return {
+            colors: this.options.topkScale.range(),
+            values: this.options.topkScale.range().map(c => res[c])
+        }
+    }
+
+    public updateThresholdValues(ths: number[]) {
+        this.options.topkScale.domain(ths);
+        this._render();
+    }
+
     protected _init() {
 
 
     }
-
 
     protected _render(rd: AnalyzedText = this.renderData): void {
         if (!rd) return;
@@ -115,26 +131,6 @@ export class GLTR_Text_Box extends VComponent<AnalyzedText> {
         this.options.diffScale.domain([0, this._current.maxValue]);
 
         return data;
-    }
-
-    public updateThresholdValues(ths: number[]) {
-        this.options.topkScale.domain(ths);
-        this._render();
-    }
-
-
-    public get colorStats() {
-        const res: { [key: string]: number } = {};
-        this.options.topkScale.range().forEach(c => res[c] = 0);
-        this.data.real_topk.map(d => d[0]).forEach(x => {
-            const c = this.options.topkScale(x);
-            res[c] += 1;
-        })
-
-        return {
-            colors: this.options.topkScale.range(),
-            values: this.options.topkScale.range().map(c => res[c])
-        }
     }
 
 }
