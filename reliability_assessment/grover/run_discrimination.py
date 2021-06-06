@@ -151,6 +151,7 @@ def main(_):
                 print(f"EXITING BECAUSE {split}-probs.npy exists", flush=True)
                 return
         # Double check to see if it has trained!
+        print(os.path.join(FLAGS.output_dir, 'checkpoint'))
         if not tf.gfile.Exists(os.path.join(FLAGS.output_dir, 'checkpoint')):
             print("EXITING BECAUSE NO CHECKPOINT.", flush=True)
             return
@@ -164,8 +165,6 @@ def main(_):
         if stuff['model_checkpoint_path'] == 'model.ckpt-0':
             print("EXITING BECAUSE IT LOOKS LIKE NOTHING TRAINED", flush=True)
             return
-
-
     elif not FLAGS.do_train:
         print("EXITING BECAUSE DO_TRAIN IS FALSE AND PATH DOESNT EXIST")
         return
@@ -180,8 +179,8 @@ def main(_):
     np.random.seed(123456)
     tf.logging.info("*** Parsing files ***")
     with tf.gfile.Open(FLAGS.input_data, "r") as f:
-        for l in f:
-            item = json.loads(l)
+        for line in f:
+            item = json.loads(line)
 
             # This little hack is because we don't want to tokenize the article twice
             context_ids = _flatten_and_tokenize_metadata(encoder=encoder, item=item)
@@ -325,6 +324,8 @@ def main(_):
         for i, res in enumerate(estimator.predict(input_fn=val_input_fn, yield_single_examples=True)):
             if i < num_actual_examples:
                 probs[i] = res['probs']
+
+        print(probs)
 
         _save_np(os.path.join(FLAGS.output_dir, f'{split}-probs.npy'), probs)
 

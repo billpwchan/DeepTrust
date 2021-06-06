@@ -16,6 +16,7 @@ class NeuralVerifier:
         self.__download_models(mode='gpt-2')
         self.__download_models(mode='grover')
         self.__init_gpt_model()
+        self.__init_gltr_models()
 
     def __init_gpt_model(self, model: str = 'detector-large.pt'):
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
@@ -23,6 +24,17 @@ class NeuralVerifier:
                                          f"./reliability_assessment/gpt_detector/models/{model}"])
         time.sleep(10)
         self.default_logger.info("GPT-2 Neural Verifier Initialized")
+
+    def __init_gltr_models(self, models: tuple = ('gpt-2-small', 'BERT')):
+        default_port = 5001
+        for model in models:
+            self.default_logger.info(f"Initialize GLTR {model}")
+            gltr_gpt_server = subprocess.Popen(
+                ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
+                 f"{default_port}"])
+            default_port += 1
+            time.sleep(5)
+            self.default_logger.info(f"GLTR {model} Initialized")
 
     def __init_grover_model(self):
         print("Yeahp")
@@ -47,7 +59,7 @@ class NeuralVerifier:
             else:
                 self.default_logger.info(f'{mode} large model exists')
         if mode == 'grover':
-            dir_prefix = "./reliability_assessment/grover/models/"
+            dir_prefix = "./reliability_assessment/grover/models/mega-0.94/"
             model_type = 'discrimination'
 
             for ext in ['data-00000-of-00001', 'index', 'meta']:
@@ -59,7 +71,7 @@ class NeuralVerifier:
                     with open(f'{dir_prefix}model.ckpt-1562.{ext}', 'wb') as f:
                         file_size = int(r.headers["content-length"])
                         if file_size < 1000:
-                            raise ValueError("File doesn't exist? idk")
+                            raise ValueError("File doesn't exist")
                         chunk_size = 1000
                         for chunk in r.iter_content(chunk_size=chunk_size):
                             f.write(chunk)
