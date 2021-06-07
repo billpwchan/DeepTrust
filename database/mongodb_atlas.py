@@ -39,7 +39,12 @@ class MongoDB:
         if database == 'tweet':
             self.default_logger.info(f'Retrieve records from database {collection_prefix}')
             return [record for record in
-                    self.db[f'{collection_prefix}_tweet'].find({}, {"_id": 0, "text": 1, "public_metrics": 1})]
+                    self.db[f'{collection_prefix}_tweet'].find({}, {"_id": 1, "text": 1, "public_metrics": 1})]
+
+    def update_one(self, ref: str, entry, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
+        if database == 'tweet':
+            self.db[f'{collection_prefix}_tweet'].update_one({'_id': ref}, {'$push': {'ra_raw': entry}}, upsert=True)
 
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'

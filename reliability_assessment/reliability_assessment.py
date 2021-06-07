@@ -9,6 +9,10 @@ import ast
 import os
 from database.mongodb_atlas import MongoDB
 from util import logger
+import subprocess
+import atexit
+
+SUB_PROCESSES = []
 
 DETECTOR_MAP = {
     'detectors':            ('gpt-2', 'grover'),
@@ -32,6 +36,7 @@ class NeuralVerifier:
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
         gpt_2_server = subprocess.Popen(["python", "./reliability_assessment/gpt_detector/server.py",
                                          f"./reliability_assessment/gpt_detector/models/{model}"])
+        SUB_PROCESSES.append(gpt_2_server)
         while True:
             try:
                 if requests.get(f"{DETECTOR_MAP['gpt-detector-server']}").status_code is not None:
@@ -47,6 +52,7 @@ class NeuralVerifier:
             gltr_gpt_server = subprocess.Popen(
                 ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
                  f"{default_port}"])
+            SUB_PROCESSES.append(gltr_gpt_server)
             while True:
                 try:
                     if requests.get(f'http://localhost:{default_port}/').status_code is not None:
@@ -136,12 +142,15 @@ class ReliabilityAssessment:
         self.tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker)
         self.default_logger = logger.get_logger('reliability_assessment')
 
+        atexit.register(lambda: [p.kill() for p in SUB_PROCESSES])
+
     @staticmethod
     def __remove_non_ascii(text):
         return ''.join((c for c in text if 0 < ord(c) < 127))
 
     def neural_fake_news_detection(self):
         for tweet in self.tweets_collection:
-            tweet_text = self.__remove_non_ascii(tweet['text'])
-            self.nv_instance.detect(text=tweet_text, mode='gpt-2')
-            self.nv_instance.detect(text=tweet_text, mode='gltr')
+            print(tweet)
+            # tweet_text = self.__remove_non_ascii(tweet['text'])
+            # self.nv_instance.detect(text=tweet_text, mode='gpt-2')
+            # self.nv_instance.detect(text=tweet_text, mode='gltr')
