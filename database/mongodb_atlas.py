@@ -49,6 +49,7 @@ class MongoDB:
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if database == 'tweet':
             self.db[f'{collection_prefix}_tweet'].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
+            self.default_logger.info(f'Update {ref} in {collection_prefix}_tweet')
 
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'

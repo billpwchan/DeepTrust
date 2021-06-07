@@ -139,9 +139,12 @@ class NeuralVerifier:
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
                                          for index, real_topk in enumerate(gltr_result['real_topk'])]
                     frac_histogram = np.histogram(frac_distribution, bins=10, range=(0.0, 1.0), density=False)
-                    gltr_result['frac_hist'] = frac_histogram
+                    gltr_result['frac_hist'] = frac_histogram[0].tolist()
                     # self.default_logger.info(f'{gltr_type}: {frac_perc_distribution}')
                     output_data.append(gltr_result)
+                else:
+                    self.default_logger.error(f'GLTR Exception: {payload}')
+                    output_data.append({})
             return output_data
         else:
             raise NotImplementedError
@@ -171,7 +174,7 @@ class ReliabilityAssessment:
         self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
         # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-        SLICES = 10
+        SLICES = 3
         for i in range(0, len(self.tweets_collection), SLICES):
             tweets_collection_small = self.tweets_collection[i:i + SLICES]
             # Update RoBERTa-detector Results
