@@ -62,12 +62,10 @@ def top_k_logits(logits, k):
         return logits
     values, _ = torch.topk(logits, k)
     min_values = values[:, -1]
-    return torch.where(logits < min_values,
-                       torch.ones_like(logits, dtype=logits.dtype) * -1e10,
-                       logits)
+    return torch.where(logits < min_values, torch.ones_like(logits, dtype=logits.dtype) * -1e10, logits)
 
 
-@register_api(name='gpt-2-xl')
+@register_api(name='gpt2-xl')
 class LM(AbstractLanguageChecker):
     def __init__(self, model_name_or_path="gpt2-xl"):
         super(LM, self).__init__()

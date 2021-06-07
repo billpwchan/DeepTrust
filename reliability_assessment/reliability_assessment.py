@@ -13,7 +13,7 @@ from util import logger
 DETECTOR_MAP = {
     'detectors':            ('gpt-2', 'grover'),
     'gpt-detector':         'detector-large.pt',
-    'gltr-detector':        ('gpt-2-xl', 'BERT'),
+    'gltr-detector':        ('gpt2-xl', 'BERT'),
     'gpt-detector-server':  'http://localhost:8080/',
     'gltr-detector-server': ('http://localhost:5001/', 'http://localhost:5002/')
 }
@@ -110,18 +110,22 @@ class NeuralVerifier:
                 url = f"{gltr_server}api/analyze"
                 payload = json.dumps({
                     "project": f"{gltr_type}",
-                    "text":    'The cat was playing in the garden.'
+                    "text":    text
                 })
                 headers = {
                     'Content-Type': 'application/json'
                 }
+                print(url)
+                print(payload)
                 response = requests.request("POST", url, headers=headers, data=payload)
                 if response.ok:
                     gltr_result = json.loads(response.text)['result']
                     # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
                                          for index, real_topk in enumerate(gltr_result['real_topk'])]
-                    print(frac_distribution)
+                    frac_perc_distribution = [item / sum(frac_distribution) for item in frac_distribution]
+                    print(frac_perc_distribution)
+
 
 class ReliabilityAssessment:
     def __init__(self, input_date: date, ticker: str):

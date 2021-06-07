@@ -10,8 +10,6 @@ from flask_cors import CORS
 # from backend.Project import Project # TODO !!
 from backend import AVAILABLE_MODELS
 
-__author__ = 'Hendrik Strobelt, Sebastian Gehrmann'
-
 CONFIG_FILE_NAME = 'lmf.yml'
 projects = {}
 
@@ -119,7 +117,7 @@ def send_data(path):
 app.add_api('server.yaml')
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default='gpt-2-xl')
+parser.add_argument("--model", default='gpt2-xl')
 parser.add_argument("--nodebug", default=True)
 parser.add_argument("--address",
                     default="127.0.0.1")  # 0.0.0.0 for nonlocal use
@@ -145,5 +143,5 @@ else:
     except KeyError:
         print("Model {} not found. Make sure to register it.".format(args.model))
         print("Loading GPT-2 instead.")
-        model = AVAILABLE_MODELS['gpt-2-xl']
+        model = AVAILABLE_MODELS['gpt2-xl']
     projects[args.model] = Project(model, args.model)
