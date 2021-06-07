@@ -151,23 +151,41 @@ class ReliabilityAssessment:
     def __remove_non_ascii(text):
         return ''.join((c for c in text if 0 < ord(c) < 127))
 
+    def detector_wrapper(self, tweet, mode):
+        tweet_text = self.__remove_non_ascii(tweet['text'])
+        return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
+
     def neural_fake_news_detection(self):
+        # Always clean up fields before starting!
         self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
+        # Update RoBERTa-detector Results
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.nv_instance.detect, self.__remove_non_ascii(tweet['text']), 'gpt-2') for
-                       tweet in self.tweets_collection[:10]]
-        print([f.result() for f in futures])
+            gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
+                             self.tweets_collection[:10]]
+        for future in gpt_2_futures:
+            self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector', future.result()['output'],
+                                        self.input_date, self.ticker)
+
+        # Update GLTR Results
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
+                            self.tweets_collection[:10]]
+        for future in gltr_futures:
+            self.db_instance.update_one(future.result()['_id'], f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
+                                        future.result()['output'][0], self.input_date, self.ticker)
+            self.db_instance.update_one(future.result()['_id'], f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
+                                        future.result()['output'][1], self.input_date, self.ticker)
         exit(0)
 
-        for tweet in self.tweets_collection:
-            tweet_text = self.__remove_non_ascii(tweet['text'])
-            gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
-            gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
-            db_entry = {
-                'RoBERTa-detector':                             gpt_2_output,
-                f"{DETECTOR_MAP['gltr-detector'][0]}-detector": gltr_output[0],
-                f"{DETECTOR_MAP['gltr-detector'][1]}-detector": gltr_output[1],
-            }
-            self.db_instance.update_one(tweet['_id'], 'ra_raw', db_entry, self.input_date, self.ticker)
+        # for tweet in self.tweets_collection:
+        #     tweet_text = self.__remove_non_ascii(tweet['text'])
+        #     gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
+        #     gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
+        #     db_entry = {
+        #         'RoBERTa-detector':                             gpt_2_output,
+        #         f"{DETECTOR_MAP['gltr-detector'][0]}-detector": gltr_output[0],
+        #         f"{DETECTOR_MAP['gltr-detector'][1]}-detector": gltr_output[1],
+        #     }
+        #     self.db_instance.update_one(tweet['_id'], 'ra_raw', db_entry, self.input_date, self.ticker)
         self.default_logger.info("Neural Fake News Detector Output Update Success! ")
