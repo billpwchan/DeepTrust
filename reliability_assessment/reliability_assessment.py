@@ -3,6 +3,8 @@ import subprocess
 import time
 from datetime import date
 import pathlib
+from multiprocessing import Pool, cpu_count
+import concurrent.futures
 
 import requests
 import ast
@@ -151,6 +153,13 @@ class ReliabilityAssessment:
 
     def neural_fake_news_detection(self):
         self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.nv_instance.detect, self.__remove_non_ascii(tweet['text']), 'gpt-2') for
+                       tweet in self.tweets_collection[:10]]
+        print([f.result() for f in futures])
+        exit(0)
+
         for tweet in self.tweets_collection:
             tweet_text = self.__remove_non_ascii(tweet['text'])
             gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
