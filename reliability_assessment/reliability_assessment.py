@@ -15,8 +15,8 @@ class NeuralVerifier:
         self.default_logger = logger.get_logger('neural_verifier')
         self.__download_models(mode='gpt-2')
         self.__download_models(mode='grover')
-        self.__init_gpt_model()
-        self.__init_gltr_models()
+        self.__init_gpt_model(model='detector-large.pt')
+        self.__init_gltr_models(models=('gpt-2-xl', 'BERT'))
         # python run_discrimination.py --input_data input_data.jsonl --output_dir models/mega-0.96 --config_file lm/configs/mega.json --predict_val true
 
     def __init_gpt_model(self, model: str = 'detector-large.pt'):
@@ -31,7 +31,7 @@ class NeuralVerifier:
             except requests.exceptions.ConnectionError:
                 continue
 
-    def __init_gltr_models(self, models: tuple = ('gpt-2-large', 'BERT')):
+    def __init_gltr_models(self, models: tuple = ('gpt-2-xl', 'BERT')):
         default_port = 5001
         for model in models:
             self.default_logger.info(f"Initialize GLTR {model}")
@@ -46,9 +46,6 @@ class NeuralVerifier:
                         break
                 except requests.exceptions.ConnectionError:
                     continue
-
-    def __init_grover_model(self):
-        print("Yeahp")
 
     def __download_models(self, mode: str = 'gpt-2'):
         if mode == 'gpt-2':
@@ -72,7 +69,6 @@ class NeuralVerifier:
         if mode == 'grover':
             dir_prefix = "./reliability_assessment/grover/models/mega-0.94/"
             model_type = 'discrimination'
-
             for ext in ['data-00000-of-00001', 'index', 'meta']:
                 model_path = pathlib.Path(f'{dir_prefix}model.ckpt-1562.{ext}')
                 if not model_path.exists():
@@ -100,6 +96,11 @@ class NeuralVerifier:
             self.default_logger.info(response.text)
             # Return a dict representation of the returned text
             return ast.literal_eval(response.text)
+        if mode == 'gltr':
+            print('Yeah')
+
+
+#             Frac P is based on the current prob in real_prob / first prob in the pred_prob
 
 
 class ReliabilityAssessment:

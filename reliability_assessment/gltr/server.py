@@ -119,7 +119,7 @@ def send_data(path):
 app.add_api('server.yaml')
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default='gpt-2-large')
+parser.add_argument("--model", default='gpt-2-xl')
 parser.add_argument("--nodebug", default=True)
 parser.add_argument("--address",
                     default="127.0.0.1")  # 0.0.0.0 for nonlocal use
@@ -143,8 +143,7 @@ else:
         print(AVAILABLE_MODELS)
         model = AVAILABLE_MODELS[args.model]
     except KeyError:
-        print("Model {} not found. Make sure to register it.".format(
-            args.model))
+        print("Model {} not found. Make sure to register it.".format(args.model))
         print("Loading GPT-2 instead.")
-        model = AVAILABLE_MODELS['gpt-2-large']
+        model = AVAILABLE_MODELS['gpt-2-xl']
     projects[args.model] = Project(model, args.model)

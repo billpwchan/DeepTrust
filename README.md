@@ -50,11 +50,13 @@ capabilities
 ```python
 PRETRAINED_MODEL_ARCHIVE_MAP = {"gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-pytorch_model.bin",
                                 "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-pytorch_model.bin",
-                                "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-pytorch_model.bin"
+                                "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-pytorch_model.bin",
+                                "gpt2-xl": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-pytorch_model.bin"
                                 }
 PRETRAINED_CONFIG_ARCHIVE_MAP = {"gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-config.json",
                                  "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-config.json",
-                                 "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-config.json"
+                                 "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-config.json",
+                                 "gpt2-xl": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-pytorch_model.bin"
                                  }
 ```
 
@@ -64,17 +66,20 @@ Same for ```tokenization_gpt2.py``` in package ```pytorch-pretrained-bert``` to 
 PRETRAINED_VOCAB_ARCHIVE_MAP = {
     'gpt2':        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-vocab.json",
     "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-vocab.json",
-    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-vocab.json"
+    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-vocab.json",
+    "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-vocab.json"
 }
 PRETRAINED_MERGES_ARCHIVE_MAP = {
     'gpt2':        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-merges.txt",
     "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-merges.txt",
-    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-merges.txt"
+    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-merges.txt",
+    "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-merges.txt"
 }
 PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP = {
     'gpt2':        1024,
     'gpt2-medium': 1024,
-    'gpt2-large':  1024
+    'gpt2-large':  1024,
+    'gpt2-xl':     1024
 }
 ```
 

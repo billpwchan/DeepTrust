@@ -67,9 +67,9 @@ def top_k_logits(logits, k):
                        logits)
 
 
-@register_api(name='gpt-2-large')
+@register_api(name='gpt-2-xl')
 class LM(AbstractLanguageChecker):
-    def __init__(self, model_name_or_path="gpt2-large"):
+    def __init__(self, model_name_or_path="gpt2-xl"):
         super(LM, self).__init__()
         self.enc = GPT2Tokenizer.from_pretrained(model_name_or_path)
         self.model = GPT2LMHeadModel.from_pretrained(model_name_or_path)
