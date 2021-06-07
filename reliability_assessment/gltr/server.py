@@ -140,10 +140,11 @@ else:
     args, _ = parser.parse_known_args()
     # load_projects(args.dir)
     try:
+        print(AVAILABLE_MODELS)
         model = AVAILABLE_MODELS[args.model]
     except KeyError:
         print("Model {} not found. Make sure to register it.".format(
             args.model))
         print("Loading GPT-2 instead.")
-        model = AVAILABLE_MODELS['gpt-2']
+        model = AVAILABLE_MODELS['gpt-2-large']
     projects[args.model] = Project(model, args.model)

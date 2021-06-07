@@ -1,3 +1,5 @@
+
+
 import subprocess
 import time
 from datetime import date
@@ -17,6 +19,7 @@ class NeuralVerifier:
         self.__download_models(mode='grover')
         self.__init_gpt_model()
         self.__init_gltr_models()
+        # python run_discrimination.py --input_data input_data.jsonl --output_dir models/mega-0.96 --config_file lm/configs/mega.json --predict_val true
 
     def __init_gpt_model(self, model: str = 'detector-large.pt'):
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
@@ -25,7 +28,7 @@ class NeuralVerifier:
         time.sleep(10)
         self.default_logger.info("GPT-2 Neural Verifier Initialized")
 
-    def __init_gltr_models(self, models: tuple = ('gpt-2-small', 'BERT')):
+    def __init_gltr_models(self, models: tuple = ('gpt-2-large', 'BERT')):
         default_port = 5001
         for model in models:
             self.default_logger.info(f"Initialize GLTR {model}")
@@ -33,8 +36,8 @@ class NeuralVerifier:
                 ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
                  f"{default_port}"])
             default_port += 1
-            time.sleep(5)
             self.default_logger.info(f"GLTR {model} Initialized")
+        time.sleep(5)
 
     def __init_grover_model(self):
         print("Yeahp")
