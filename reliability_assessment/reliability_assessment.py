@@ -108,10 +108,11 @@ class NeuralVerifier:
             payload = {}
             headers = {}
             response = requests.request("GET", url, headers=headers, data=payload)
-            self.default_logger.info(response.text)
+            self.default_logger.info(f'{mode}: {response.text}')
             # Return a dict representation of the returned text
             return ast.literal_eval(response.text)
         if mode == 'gltr':
+            output_data = []
             for gltr_type, gltr_server in zip(DETECTOR_MAP['gltr-detector'], DETECTOR_MAP['gltr-detector-server']):
                 url = f"{gltr_server}api/analyze"
                 payload = json.dumps({
@@ -128,7 +129,9 @@ class NeuralVerifier:
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
                                          for index, real_topk in enumerate(gltr_result['real_topk'])]
                     frac_perc_distribution = [item / sum(frac_distribution) for item in frac_distribution]
-                    return gltr_result
+                    self.default_logger.info(f'{gltr_type}: {frac_perc_distribution}')
+                    output_data.append(gltr_result)
+            return output_data
 
 
 class ReliabilityAssessment:
@@ -147,10 +150,15 @@ class ReliabilityAssessment:
         return ''.join((c for c in text if 0 < ord(c) < 127))
 
     def neural_fake_news_detection(self):
-        for tweet in self.tweets_collection:
-            self.db_instance.push_one(tweet['_id'], 'ra_raw', {'entry': 1}, self.input_date, self.ticker)
-            # tweet_text = self.__remove_non_ascii(tweet['text'])
-            # gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
-            # gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
         self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
-        print("Yeah")
+        for tweet in self.tweets_collection:
+            tweet_text = self.__remove_non_ascii(tweet['text'])
+            gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
+            gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
+            db_entry = {
+                'RoBERTa-detector':                             gpt_2_output,
+                f"{DETECTOR_MAP['gltr-detector'][0]}-detector": gltr_output[0],
+                f"{DETECTOR_MAP['gltr-detector'][1]}-detector": gltr_output[1],
+            }
+            self.db_instance.update_one(tweet['_id'], 'ra_raw', db_entry, self.input_date, self.ticker)
+        self.default_logger.info("Neural Fake News Detector Output Update Success! ")
