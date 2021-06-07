@@ -110,17 +110,18 @@ class NeuralVerifier:
                 url = f"{gltr_server}api/analyze"
                 payload = json.dumps({
                     "project": f"{gltr_type}",
-                    "text":    text
+                    "text":    'The cat was playing in the garden.'
                 })
                 headers = {
                     'Content-Type': 'application/json'
                 }
                 response = requests.request("POST", url, headers=headers, data=payload)
-                print(response.text)
-
-
-#             Frac P is based on the current prob in real_prob / first prob in the pred_prob
-
+                if response.ok:
+                    gltr_result = json.loads(response.text)['result']
+                    # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
+                    frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
+                                         for index, real_topk in enumerate(gltr_result['real_topk'])]
+                    print(frac_distribution)
 
 class ReliabilityAssessment:
     def __init__(self, input_date: date, ticker: str):
