@@ -16,14 +16,10 @@
 # limitations under the License.
 """ Conditional text generation with the auto-regressive models of the library (GPT/GPT-2/CTRL/Transformer-XL/XLNet)
 """
-
-
 import argparse
-import logging
 
 import numpy as np
 import torch
-
 from transformers import (
     CTRLLMHeadModel,
     CTRLTokenizer,
@@ -39,23 +35,19 @@ from transformers import (
     XLNetTokenizer,
 )
 
+from util import logger
 
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-    datefmt="%m/%d/%Y %H:%M:%S",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+default_logger = logger.get_logger('tweet_generation')
 
 MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 
 MODEL_CLASSES = {
-    "gpt2": (GPT2LMHeadModel, GPT2Tokenizer),
-    "ctrl": (CTRLLMHeadModel, CTRLTokenizer),
+    "gpt2":       (GPT2LMHeadModel, GPT2Tokenizer),
+    "ctrl":       (CTRLLMHeadModel, CTRLTokenizer),
     "openai-gpt": (OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
-    "xlnet": (XLNetLMHeadModel, XLNetTokenizer),
+    "xlnet":      (XLNetLMHeadModel, XLNetTokenizer),
     "transfo-xl": (TransfoXLLMHeadModel, TransfoXLTokenizer),
-    "xlm": (XLMWithLMHeadModel, XLMTokenizer),
+    "xlm":        (XLMWithLMHeadModel, XLMTokenizer),
 }
 
 # Padding text to help Transformer-XL and XLNet with short prompts as proposed by Aman Rusia
@@ -83,15 +75,14 @@ def set_seed(args):
 #
 # Functions to prepare models' input
 #
-
-
 def prepare_ctrl_input(args, _, tokenizer, prompt_text):
     if args.temperature > 0.7:
-        logger.info("CTRL typically works better with lower temperatures (and lower top_k).")
+        default_logger.info("CTRL typically works better with lower temperatures (and lower top_k).")
 
     encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False)
     if not any(encoded_prompt[0] == x for x in tokenizer.control_codes.values()):
-        logger.info("WARNING! You are not starting your generation from a control code so you won't get good results")
+        default_logger.info(
+            "WARNING! You are not starting your generation from a control code so you won't get good results")
     return prompt_text
 
 
@@ -133,9 +124,9 @@ def prepare_transfoxl_input(args, _, tokenizer, prompt_text):
 
 
 PREPROCESSING_FUNCTIONS = {
-    "ctrl": prepare_ctrl_input,
-    "xlm": prepare_xlm_input,
-    "xlnet": prepare_xlnet_input,
+    "ctrl":       prepare_ctrl_input,
+    "xlm":        prepare_xlm_input,
+    "xlnet":      prepare_xlnet_input,
     "transfo-xl": prepare_transfoxl_input,
 }
 
@@ -200,7 +191,7 @@ def main():
     args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     args.n_gpu = 0 if args.no_cuda else torch.cuda.device_count()
 
-    logger.warning(f"device: {args.device}, n_gpu: {args.n_gpu}, 16-bits training: {args.fp16}")
+    default_logger.warning(f"device: {args.device}, n_gpu: {args.n_gpu}, 16-bits training: {args.fp16}")
 
     set_seed(args)
 
@@ -219,7 +210,7 @@ def main():
         model.half()
 
     args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
-    logger.info(args)
+    default_logger.info(args)
 
     prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
 
@@ -276,7 +267,7 @@ def main():
 
         # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
         total_sequence = (
-            prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)) :]
+                prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)):]
         )
 
         generated_sequences.append(total_sequence)
