@@ -136,7 +136,12 @@ class ReliabilityAssessment:
         self.tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker)
         self.default_logger = logger.get_logger('reliability_assessment')
 
+    @staticmethod
+    def __remove_non_ascii(text):
+        return ''.join((c for c in text if 0 < ord(c) < 127))
+
     def neural_fake_news_detection(self):
         for tweet in self.tweets_collection:
-            self.nv_instance.detect(text=tweet['text'], mode='gpt-2')
-            self.nv_instance.detect(text=tweet['text'], mode='gltr')
+            tweet_text = self.__remove_non_ascii(tweet['text'])
+            self.nv_instance.detect(text=tweet_text, mode='gpt-2')
+            self.nv_instance.detect(text=tweet_text, mode='gltr')
