@@ -6,6 +6,7 @@ import pathlib
 from multiprocessing import Pool, cpu_count
 import concurrent.futures
 
+import numpy as np
 import requests
 import ast
 import os
@@ -104,16 +105,23 @@ class NeuralVerifier:
                     self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
 
     def detect(self, text, mode: str = 'gpt-2') -> dict or list:
+        """
+        Output Format for GPT-2: {'all_tokens', 'used_tokens', 'real_probability', 'fake_probability'}
+        Output Format for GLTR: {'bpe_strings', 'pred_topk', 'real_topk', 'frac_hist'}
+        :param text: Tweet Text (Without Non-ASCII Code)
+        :param mode: 'gpt-2' or 'gltr' currently supported
+        :return:
+        """
         if mode == 'gpt-2':
             # Payload text should not have # symbols or it will ignore following text - less tokens
             url = f"{DETECTOR_MAP['gpt-detector-server']}?={text.replace('#', '')}"
             payload = {}
             headers = {}
             response = requests.request("GET", url, headers=headers, data=payload)
-            self.default_logger.info(f'{mode}: {response.text}')
+            # self.default_logger.info(f'{mode}: {response.text}')
             # Return a dict representation of the returned text
             return ast.literal_eval(response.text)
-        if mode == 'gltr':
+        elif mode == 'gltr':
             output_data = []
             for gltr_type, gltr_server in zip(DETECTOR_MAP['gltr-detector'], DETECTOR_MAP['gltr-detector-server']):
                 url = f"{gltr_server}api/analyze"
@@ -130,10 +138,13 @@ class NeuralVerifier:
                     # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
                                          for index, real_topk in enumerate(gltr_result['real_topk'])]
-                    frac_perc_distribution = [item / sum(frac_distribution) for item in frac_distribution]
-                    self.default_logger.info(f'{gltr_type}: {frac_perc_distribution}')
+                    frac_histogram = np.histogram(frac_distribution, bins=10, range=(0.0, 1.0), density=False)
+                    gltr_result['frac_hist'] = frac_histogram
+                    # self.default_logger.info(f'{gltr_type}: {frac_perc_distribution}')
                     output_data.append(gltr_result)
             return output_data
+        else:
+            raise NotImplementedError
 
 
 class ReliabilityAssessment:
@@ -159,33 +170,29 @@ class ReliabilityAssessment:
         # Always clean up fields before starting!
         self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
-        # Update RoBERTa-detector Results
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
-                             self.tweets_collection[:10]]
-        for future in gpt_2_futures:
-            self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector', future.result()['output'],
-                                        self.input_date, self.ticker)
+        # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
+        SLICES = 10
+        for i in range(0, len(self.tweets_collection), SLICES):
+            tweets_collection_small = self.tweets_collection[i:i + SLICES]
+            # Update RoBERTa-detector Results
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
+                                 tweets_collection_small]
+            for future in gpt_2_futures:
+                self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector',
+                                            future.result()['output'],
+                                            self.input_date, self.ticker)
 
-        # Update GLTR Results
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
-                            self.tweets_collection[:10]]
-        for future in gltr_futures:
-            self.db_instance.update_one(future.result()['_id'], f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
-                                        future.result()['output'][0], self.input_date, self.ticker)
-            self.db_instance.update_one(future.result()['_id'], f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
-                                        future.result()['output'][1], self.input_date, self.ticker)
-        exit(0)
+            # Update GLTR Results
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
+                                tweets_collection_small]
+            for future in gltr_futures:
+                self.db_instance.update_one(future.result()['_id'],
+                                            f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
+                                            future.result()['output'][0], self.input_date, self.ticker)
+                self.db_instance.update_one(future.result()['_id'],
+                                            f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
+                                            future.result()['output'][1], self.input_date, self.ticker)
 
-        # for tweet in self.tweets_collection:
-        #     tweet_text = self.__remove_non_ascii(tweet['text'])
-        #     gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
-        #     gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
-        #     db_entry = {
-        #         'RoBERTa-detector':                             gpt_2_output,
-        #         f"{DETECTOR_MAP['gltr-detector'][0]}-detector": gltr_output[0],
-        #         f"{DETECTOR_MAP['gltr-detector'][1]}-detector": gltr_output[1],
-        #     }
-        #     self.db_instance.update_one(tweet['_id'], 'ra_raw', db_entry, self.input_date, self.ticker)
         self.default_logger.info("Neural Fake News Detector Output Update Success! ")
