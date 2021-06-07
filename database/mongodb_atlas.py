@@ -41,10 +41,14 @@ class MongoDB:
             return [record for record in
                     self.db[f'{collection_prefix}_tweet'].find({}, {"_id": 1, "text": 1, "public_metrics": 1})]
 
-    def update_one(self, ref: str, entry, input_date: date, ticker: str, database: str = 'tweet'):
+    def remove_many(self, field, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
+        self.db[f'{collection_prefix}_{database}'].update_many({}, {'$unset': {field: ''}})
+
+    def push_one(self, ref, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if database == 'tweet':
-            self.db[f'{collection_prefix}_tweet'].update_one({'_id': ref}, {'$push': {'ra_raw': entry}}, upsert=True)
+            self.db[f'{collection_prefix}_tweet'].update_one({'_id': ref}, {'$push': {field: entry}}, upsert=True)
 
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'

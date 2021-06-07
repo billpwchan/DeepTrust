@@ -101,7 +101,7 @@ class NeuralVerifier:
                 else:
                     self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
 
-    def detect(self, text, mode: str = 'gpt-2') -> dict:
+    def detect(self, text, mode: str = 'gpt-2') -> dict or list:
         if mode == 'gpt-2':
             # Payload text should not have # symbols or it will ignore following text - less tokens
             url = f"{DETECTOR_MAP['gpt-detector-server']}?={text.replace('#', '')}"
@@ -121,8 +121,6 @@ class NeuralVerifier:
                 headers = {
                     'Content-Type': 'application/json'
                 }
-                print(url)
-                print(payload)
                 response = requests.request("POST", url, headers=headers, data=payload)
                 if response.ok:
                     gltr_result = json.loads(response.text)['result']
@@ -130,7 +128,7 @@ class NeuralVerifier:
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
                                          for index, real_topk in enumerate(gltr_result['real_topk'])]
                     frac_perc_distribution = [item / sum(frac_distribution) for item in frac_distribution]
-                    print(frac_perc_distribution)
+                    return gltr_result
 
 
 class ReliabilityAssessment:
@@ -150,7 +148,9 @@ class ReliabilityAssessment:
 
     def neural_fake_news_detection(self):
         for tweet in self.tweets_collection:
-            print(tweet)
+            self.db_instance.push_one(tweet['_id'], 'ra_raw', {'entry': 1}, self.input_date, self.ticker)
             # tweet_text = self.__remove_non_ascii(tweet['text'])
-            # self.nv_instance.detect(text=tweet_text, mode='gpt-2')
-            # self.nv_instance.detect(text=tweet_text, mode='gltr')
+            # gpt_2_output = self.nv_instance.detect(text=tweet_text, mode='gpt-2')
+            # gltr_output = self.nv_instance.detect(text=tweet_text, mode='gltr')
+        self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
+        print("Yeah")
