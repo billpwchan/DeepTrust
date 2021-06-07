@@ -1,5 +1,3 @@
-
-
 import subprocess
 import time
 from datetime import date
@@ -25,8 +23,13 @@ class NeuralVerifier:
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
         gpt_2_server = subprocess.Popen(["python", "./reliability_assessment/gpt_detector/server.py",
                                          f"./reliability_assessment/gpt_detector/models/{model}"])
-        time.sleep(10)
-        self.default_logger.info("GPT-2 Neural Verifier Initialized")
+        while True:
+            try:
+                if requests.get(f'http://localhost:8080/').status_code is not None:
+                    self.default_logger.info("GPT-2 Neural Verifier Initialized")
+                    break
+            except requests.exceptions.ConnectionError:
+                continue
 
     def __init_gltr_models(self, models: tuple = ('gpt-2-large', 'BERT')):
         default_port = 5001
@@ -35,9 +38,14 @@ class NeuralVerifier:
             gltr_gpt_server = subprocess.Popen(
                 ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
                  f"{default_port}"])
-            default_port += 1
-            self.default_logger.info(f"GLTR {model} Initialized")
-        time.sleep(5)
+            while True:
+                try:
+                    if requests.get(f'http://localhost:{default_port}/').status_code is not None:
+                        self.default_logger.info(f"GLTR {model} Initialized")
+                        default_port += 1
+                        break
+                except requests.exceptions.ConnectionError:
+                    continue
 
     def __init_grover_model(self):
         print("Yeahp")
