@@ -1,19 +1,17 @@
-import json
-import subprocess
-import time
-from datetime import date
-import pathlib
-from multiprocessing import Pool, cpu_count
+import ast
+import atexit
 import concurrent.futures
+import json
+import pathlib
+import subprocess
+from datetime import date
 
 import numpy as np
 import requests
-import ast
-import os
+from tqdm import trange
+
 from database.mongodb_atlas import MongoDB
 from util import logger
-import subprocess
-import atexit
 
 SUB_PROCESSES = []
 
@@ -31,11 +29,9 @@ class NeuralVerifier:
         self.default_logger = logger.get_logger('neural_verifier')
         for detector in DETECTOR_MAP['detectors']:
             self.__download_models(mode=detector)
-        self.__init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
-        self.__init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
         # python run_discrimination.py --input_data input_data.jsonl --output_dir models/mega-0.96 --config_file lm/configs/mega.json --predict_val true
 
-    def __init_gpt_model(self, model: str = DETECTOR_MAP['gpt-detector']):
+    def init_gpt_model(self, model: str = DETECTOR_MAP['gpt-detector']):
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
         gpt_2_server = subprocess.Popen(["python", "./reliability_assessment/gpt_detector/server.py",
                                          f"./reliability_assessment/gpt_detector/models/{model}"])
@@ -48,7 +44,7 @@ class NeuralVerifier:
             except requests.exceptions.ConnectionError:
                 continue
 
-    def __init_gltr_models(self, models: tuple = DETECTOR_MAP['gltr-detector']):
+    def init_gltr_models(self, models: tuple = DETECTOR_MAP['gltr-detector']):
         default_port = 5001
         for model in models:
             self.default_logger.info(f"Initialize GLTR {model}")
@@ -172,25 +168,36 @@ class ReliabilityAssessment:
 
     def neural_fake_news_detection(self):
         # Always clean up fields before starting!
-        self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
+        if input('DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y":
+            self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
+        self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
         # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-        SLICES = 3
-        for i in range(0, len(self.tweets_collection), SLICES):
+        SLICES = 10
+        for i in trange(0, len(self.tweets_collection), SLICES):
             tweets_collection_small = self.tweets_collection[i:i + SLICES]
             # Update RoBERTa-detector Results
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
                                  tweets_collection_small]
-            # Update GLTR Results
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
-                                tweets_collection_small]
+
             # Update MongoDB
             for future in gpt_2_futures:
                 self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector',
                                             future.result()['output'],
                                             self.input_date, self.ticker)
+
+        # Kill GPT-2 Process
+        result = [p.kill() for p in SUB_PROCESSES]
+
+        self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
+        SLICES = 3
+        for i in trange(0, len(self.tweets_collection), SLICES):
+            tweets_collection_small = self.tweets_collection[i:i + SLICES]
+            # Update GLTR Results
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
+                                tweets_collection_small]
             for future in gltr_futures:
                 self.db_instance.update_one(future.result()['_id'],
                                             f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
@@ -198,5 +205,7 @@ class ReliabilityAssessment:
                 self.db_instance.update_one(future.result()['_id'],
                                             f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
                                             future.result()['output'][1], self.input_date, self.ticker)
+
+        result = [p.kill() for p in SUB_PROCESSES]
 
         self.default_logger.info("Neural Fake News Detector Output Update Success! ")
