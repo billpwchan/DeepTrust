@@ -108,6 +108,7 @@ class NeuralVerifier:
         """
         Output Format for GPT-2: {'all_tokens', 'used_tokens', 'real_probability', 'fake_probability'}
         Output Format for GLTR: {'bpe_strings', 'pred_topk', 'real_topk', 'frac_hist'}
+        Be noted that BERT may not return valid results due to empty tokenized text. Just ignore it.
         :param text: Tweet Text (Without Non-ASCII Code)
         :param mode: 'gpt-2' or 'gltr' currently supported
         :return:
@@ -181,15 +182,15 @@ class ReliabilityAssessment:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
                                  tweets_collection_small]
-            for future in gpt_2_futures:
-                self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector',
-                                            future.result()['output'],
-                                            self.input_date, self.ticker)
-
             # Update GLTR Results
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
                                 tweets_collection_small]
+            # Update MongoDB
+            for future in gpt_2_futures:
+                self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector',
+                                            future.result()['output'],
+                                            self.input_date, self.ticker)
             for future in gltr_futures:
                 self.db_instance.update_one(future.result()['_id'],
                                             f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
