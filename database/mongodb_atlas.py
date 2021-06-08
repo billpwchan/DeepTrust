@@ -39,7 +39,8 @@ class MongoDB:
         if database == 'tweet':
             self.default_logger.info(f'Retrieve records from database {collection_prefix}')
             return [record for record in
-                    self.db[f'{collection_prefix}_tweet'].find({}, {"_id": 1, "text": 1, "public_metrics": 1})]
+                    self.db[f'{collection_prefix}_tweet'].find({},
+                                                               {"_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1})]
 
     def remove_many(self, field, input_date: date, ticker: str, database: str = 'tweet'):
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'

@@ -168,15 +168,19 @@ class ReliabilityAssessment:
 
     def neural_fake_news_detection(self, gpt_2: bool, gltr: bool):
         # Always clean up fields before starting!
-        if input('DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y":
+        if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
             self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
             SLICES = 10
-            for i in trange(0, len(self.tweets_collection), SLICES):
-                tweets_collection_small = self.tweets_collection[i:i + SLICES]
+            gpt_collection = [tweet for tweet in self.tweets_collection if
+                              not ('ra_raw' in tweet and 'RoBERTa-detector' in tweet['ra_raw'])]
+            self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
+
+            for i in trange(0, len(gpt_collection), SLICES):
+                tweets_collection_small = gpt_collection[i:i + SLICES]
                 # Update RoBERTa-detector Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
@@ -188,13 +192,20 @@ class ReliabilityAssessment:
                                                 future.result()['output'],
                                                 self.input_date, self.ticker)
             # Kill GPT-2 Process
-            result = [p.kill() for p in SUB_PROCESSES]
+            [p.kill() for p in SUB_PROCESSES]
 
         if gltr:
             self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
             SLICES = 3
-            for i in trange(0, len(self.tweets_collection), SLICES):
-                tweets_collection_small = self.tweets_collection[i:i + SLICES]
+            gltr_collection = [tweet for tweet in self.tweets_collection if
+                               not ('ra_raw' in tweet and
+                                    f"{DETECTOR_MAP['gltr-detector'][0]}-detector" in tweet['ra_raw'] and
+                                    f"{DETECTOR_MAP['gltr-detector'][1]}-detector" in tweet['ra_raw'])
+                               ]
+            self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
+
+            for i in trange(0, len(gltr_collection), SLICES):
+                tweets_collection_small = gltr_collection[i:i + SLICES]
                 # Update GLTR Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
@@ -206,6 +217,6 @@ class ReliabilityAssessment:
                     self.db_instance.update_one(future.result()['_id'],
                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
                                                 future.result()['output'][1], self.input_date, self.ticker)
-            result = [p.kill() for p in SUB_PROCESSES]
+            [p.kill() for p in SUB_PROCESSES]
 
         self.default_logger.info("Neural Fake News Detector Output Update Success! ")
