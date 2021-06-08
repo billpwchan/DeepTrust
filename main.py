@@ -46,7 +46,7 @@ def main():
 
     if args.module == 'RA':
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
-        ra_instance.neural_fake_news_detection()
+        ra_instance.neural_fake_news_detection(gpt_2=True, gltr=True)
 
 
 if __name__ == '__main__':
