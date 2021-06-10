@@ -219,4 +219,4 @@ class ReliabilityAssessment:
                                                 future.result()['output'][1], self.input_date, self.ticker)
             [p.kill() for p in SUB_PROCESSES]
 
-        self.default_logger.info("Neural Fake News Detector Output Update Success! ")
+        self.default_logger.info("Neural Fake News Detector Output Update Success!")

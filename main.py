@@ -15,10 +15,16 @@ def main():
                         type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
     parser.add_argument('-ed', "--end_date", help="Specify the end date (DD/MM/YYYY)",
                         type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
-    parser.add_argument('-adm', "--ad_method", help="Specify the end date", type=str, choices=['arima', 'lof', 'if'])
+    parser.add_argument('-adm', "--ad_method",
+                        help="Specify Anomaly Detection method to use (ARIMA, Local Outlier Factor, Isolation Forest)",
+                        type=str, choices=['arima', 'lof', 'if'])
     # Information Retrieval Arguments
     parser.add_argument('-ad', "--anomaly_date", help="Specify the anomaly date",
                         type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
+
+    # Reliability Assessment Arguments
+    parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
+                        choices=['gpt-2', 'gltr', 'neural-train'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -30,8 +36,8 @@ def main():
     if args.module == 'IR' and (args.ticker is None or args.anomaly_date is None):
         parser.error("Information Retrieval requires --ticker, --anomaly_date")
 
-    if args.module == 'RA' and (args.ticker is None or args.anomaly_date is None):
-        parser.error("Reliability Assessment requires --ticker, --anomaly_date")
+    if args.module == 'RA' and (args.ticker is None or args.anomaly_date is None or args.ra_tasks is None):
+        parser.error("Reliability Assessment requires --ticker, --anomaly_date --ra_tasks")
 
     if args.module == 'AD':
         ad_instance = AnomalyDetection(ticker=args.ticker, mode=args.ad_method)
@@ -46,7 +52,7 @@ def main():
 
     if args.module == 'RA':
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
-        ra_instance.neural_fake_news_detection(gpt_2=True, gltr=True)
+        ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.ra_tasks), gltr=('gltr' in args.ra_tasks))
 
 
 if __name__ == '__main__':
