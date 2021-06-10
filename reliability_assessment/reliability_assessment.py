@@ -376,7 +376,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 10
+            SLICES = 30 # Good for 1080 Ti
             gpt_collection = self.db_instance.get_non_updated_tweets('ra_raw.RoBERTa-detector',
                                                                      self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
