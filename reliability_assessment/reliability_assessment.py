@@ -432,6 +432,14 @@ class ReliabilityAssessment:
                       encoding='utf-8') as file_handle:
                 file_handle.writelines(f"{tweet}\n" for tweet in value)
 
+    def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
+        # run_clm.py - -model_name_or_path
+        # gpt2 - medium - -model_type
+        # gpt2 - -train_data_file. / detector_dataset / TWTR_2021 - 04 - 30
+        # _train.txt - -eval_data_file. / detector_dataset / TWTR_2021 - 04 - 30
+        # _test.txt - -line_by_line - -do_train - -do_eval - -output_dir / tmp - -overwrite_output_dir
+        print("Let's train the GPT-2 for Tweets! ")
+
     def neural_fake_news_generation(self, model_type, model_name_or_path):
         """
         For each authentic tweet, generate a fake one based on a prompt (extracted from Top-..random substring in original tweet)
