@@ -47,6 +47,13 @@ class MongoDB:
             if ra_raw else {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         return [record for record in self.db[collection_name].find({}, select_filed)]
 
+    def get_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
+                               select_field=None):
+        if select_field is None:
+            select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        return [record for record in self.db[collection_name].find({field: {'$exists': False}}, select_field)]
+
     def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         return self.db[collection_name].find().count()
@@ -64,7 +71,7 @@ class MongoDB:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         try:
             result = self.db[collection_name].insert_many(record_list, ordered=False,
-                                                               bypass_document_validation=True)
+                                                          bypass_document_validation=True)
             self.default_logger.info(
                 f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
         except BulkWriteError as e:
