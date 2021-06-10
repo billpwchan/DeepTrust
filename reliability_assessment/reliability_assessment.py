@@ -9,6 +9,7 @@ import numpy as np
 import requests
 from tqdm import trange
 import gc
+
 gc.enable()
 import numpy as np
 import torch
@@ -103,9 +104,10 @@ class TweetGeneration:
         :param length: Length of generated sequence (Tweet should be around 20)
         :param stop_token: Token at which text generation is stopped
         :param temperature: Temperature of 1.0 has no effect, lower tend toward greedy sampling
+                            Temperature -> Boltzmann distribution - Sampling deterministic
         :param repetition_penalty: Not useful for gpt-2 model
         :param k: Sampling range
-        :param p: Temperature -> Boltzmann distribution - Sampling deterministic
+        :param p:
         :param prefix:
         :param xlm_language:
         :param seed:
