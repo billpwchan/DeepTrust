@@ -436,7 +436,9 @@ class ReliabilityAssessment:
 
         SLICES = 3
         for i in trange(0, len(tweets_collection), SLICES):
-            tweets_collection_small = tweets_collection[i:i + SLICES]
+            tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if not
+                                       self.db_instance.check_record_exists("original_id", tweet['id'], self.input_date,
+                                                                            self.ticker, database='fake')]
 
             for tweet in tweets_collection_small:
                 fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
@@ -444,8 +446,7 @@ class ReliabilityAssessment:
                                tg_instance.tweet_generation(model_type=model_type,
                                                             model_name_or_path=model_name_or_path,
                                                             prompt=tweet['text'][
-                                                                   :randint(2, int(len(tweet['text']) / 2))].encode(
-                                                                'utf-8'),
+                                                                   :randint(2, int(len(tweet['text']) / 2))],
                                                             temperature=1, num_return_sequences=2, no_cuda=False)]
 
                 self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')

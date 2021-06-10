@@ -58,6 +58,10 @@ class MongoDB:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         return self.db[collection_name].find().count()
 
+    def check_record_exists(self, field, value, input_date: date, ticker: str, database: str = 'fake') -> bool:
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        return self.db[collection_name].find({field: value}).count() > 0
+
     def remove_many(self, field, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.db[collection_name].update_many({}, {'$unset': {field: ''}})
