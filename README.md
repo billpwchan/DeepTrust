@@ -25,6 +25,19 @@ high level of precision in retrieving information from Twitter that constitutes 
 explain financial anomalies. Solution effectiveness will be evaluated both module-wise and framework-wise to empirically
 conclude the practicality of the DeepTrust framework in fulfilling its objective.
 
+## How to Install
+
+Open Anaconda Prompt in you computer, and type the following command to create an environment.
+```commandline
+conda env create -f environment.yml
+```
+
+To export current environment, use the following command
+```commandline
+conda env export > environment.yml
+```
+
+
 ## Command-line Interface Usages
 
 Retrieve a list of anomalies in `TWTR` (Twitter) pricing data between `04/01/2021` and `20/05/2021` using ARIMA-based
