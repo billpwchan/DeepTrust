@@ -104,8 +104,8 @@ class TweetGeneration:
         :param stop_token: Token at which text generation is stopped
         :param temperature: Temperature of 1.0 has no effect, lower tend toward greedy sampling
         :param repetition_penalty: Not useful for gpt-2 model
-        :param k:
-        :param p:
+        :param k: Sampling range
+        :param p: Temperature -> Boltzmann distribution - Sampling deterministic
         :param prefix:
         :param xlm_language:
         :param seed:
