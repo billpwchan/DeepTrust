@@ -53,7 +53,8 @@ def main():
     if args.module == 'RA':
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
         if 'neural-generate' in args.ra_tasks:
-            ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='gpt2-medium')
+            ra_instance.neural_fake_news_dataset_handle()
+            # ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='gpt2-medium')
         if 'neural-update' in args.ra_tasks:
             ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.ra_tasks), gltr=('gltr' in args.ra_tasks))
 

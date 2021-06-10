@@ -1,20 +1,16 @@
 import ast
 import atexit
 import concurrent.futures
+import gc
 import json
 import pathlib
 import subprocess
 from datetime import date
-from random import randint
 
 import numpy as np
 import requests
-from tqdm import trange
-import gc
-
-gc.enable()
-import numpy as np
 import torch
+from tqdm import trange
 from transformers import (
     GPT2LMHeadModel,
     GPT2Tokenizer,
@@ -23,8 +19,11 @@ from transformers import (
     XLMTokenizer,
     XLMWithLMHeadModel,
 )
+
 from database.mongodb_atlas import MongoDB
 from util import *
+
+gc.enable()
 
 SUB_PROCESSES = []
 
@@ -423,6 +422,16 @@ class ReliabilityAssessment:
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
+    def neural_fake_news_dataset_handle(self):
+        tweets_collection = [tweet['text'].replace("\n", "") for tweet in
+                             self.db_instance.get_all_tweets(self.input_date, self.ticker, ra_raw=False)]
+
+        train, test = np.split(np.array(tweets_collection), [int(len(tweets_collection) * 0.8)])
+        for index, value in {'train': train, 'test': test}.items():
+            with open(f'./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_{index}.txt', 'w+',
+                      encoding='utf-8') as file_handle:
+                file_handle.writelines(f"{tweet}\n" for tweet in value)
+
     def neural_fake_news_generation(self, model_type, model_name_or_path):
         """
         For each authentic tweet, generate a fake one based on a prompt (extracted from Top-..random substring in original tweet)
@@ -437,8 +446,8 @@ class ReliabilityAssessment:
         SLICES = 3
         for i in trange(0, len(tweets_collection), SLICES):
             tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if not
-                                       self.db_instance.check_record_exists("original_id", tweet['id'], self.input_date,
-                                                                            self.ticker, database='fake')]
+            self.db_instance.check_record_exists("original_id", tweet['id'], self.input_date,
+                                                 self.ticker, database='fake')]
 
             for tweet in tweets_collection_small:
                 fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
@@ -446,7 +455,8 @@ class ReliabilityAssessment:
                                tg_instance.tweet_generation(model_type=model_type,
                                                             model_name_or_path=model_name_or_path,
                                                             prompt=tweet['text'][
-                                                                   :randint(2, int(len(tweet['text']) / 2))],
+                                                                   # :randint(2, int(len(tweet['text']) / 2))],
+                                                                   :2],
                                                             temperature=1, num_return_sequences=2, no_cuda=False)]
 
                 self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')
