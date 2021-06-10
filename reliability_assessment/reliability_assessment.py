@@ -5,6 +5,8 @@ import json
 import pathlib
 import subprocess
 from datetime import date
+from random import randint
+
 import numpy as np
 import requests
 from tqdm import trange
@@ -145,8 +147,7 @@ class TweetGeneration:
         TweetGeneration.default_logger.warning(
             f"device: {args.device}, n_gpu: {args.n_gpu}, 16-bits training: {args.fp16}")
 
-        TweetGeneration.set_seed(args)
-
+        # TweetGeneration.set_seed(args)
         # Initialize the model and tokenizer
         try:
             args.model_type = args.model_type.lower()
@@ -356,7 +357,6 @@ class ReliabilityAssessment:
         self.ticker = ticker
         self.nv_instance = NeuralVerifier()
         self.db_instance = MongoDB()
-        self.tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker)
         self.default_logger = logger.get_logger('reliability_assessment')
 
         atexit.register(lambda: [p.kill() for p in SUB_PROCESSES])
@@ -370,6 +370,8 @@ class ReliabilityAssessment:
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
 
     def neural_fake_news_detection(self, gpt_2: bool, gltr: bool):
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, ra_raw=True)
+
         # Always clean up fields before starting!
         # if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
         #     self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
@@ -378,7 +380,7 @@ class ReliabilityAssessment:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
             SLICES = 10
-            gpt_collection = [tweet for tweet in self.tweets_collection if
+            gpt_collection = [tweet for tweet in tweets_collection if
                               not ('ra_raw' in tweet and 'RoBERTa-detector' in tweet['ra_raw'])]
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
@@ -400,7 +402,7 @@ class ReliabilityAssessment:
         if gltr:
             self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
             SLICES = 2
-            gltr_collection = [tweet for tweet in self.tweets_collection if
+            gltr_collection = [tweet for tweet in tweets_collection if
                                not ('ra_raw' in tweet and
                                     f"{DETECTOR_MAP['gltr-detector'][0]}-detector" in tweet['ra_raw'] and
                                     f"{DETECTOR_MAP['gltr-detector'][1]}-detector" in tweet['ra_raw'])
@@ -425,8 +427,31 @@ class ReliabilityAssessment:
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
-    def train_neural_fake_news_verifier(self):
+    def neural_fake_news_generation(self, model_type, model_name_or_path):
+        """
+        For each authentic tweet, generate a fake one based on a prompt (extracted from Top-..random substring in original tweet)
+        :param model_type: ['gpt2', 'xlm']
+        :param model_name_or_path: ['gpt2', 'xlm-en-...']
+        """
+        if input('CAUTION: DO YOU WANT TO CLEAN FAKE Database? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
+            self.db_instance.drop_collection()
+
+
         tg_instance = TweetGeneration()
-        fake_tweets = tg_instance.tweet_generation(model_type='gpt2', model_name_or_path='gpt2', prompt='Tesla',
-                                                   temperature=0.94)
-        self.default_logger.info(fake_tweets)
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, ra_raw=False)
+
+        SLICES = 3
+        for i in trange(0, len(tweets_collection), SLICES):
+            tweets_collection_small = tweets_collection[i:i + SLICES]
+            flatten = lambda t: [item for sublist in t for item in sublist]
+
+            for tweet in tweets_collection_small:
+                fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id']}
+                               for individual_fake_tweet in
+                               tg_instance.tweet_generation(model_type=model_type,
+                                                            model_name_or_path=model_name_or_path,
+                                                            prompt=tweet['text'][
+                                                                   :randint(2, int(len(tweet['text']) / 2))],
+                                                            temperature=1, num_return_sequences=2)]
+
+                self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')

@@ -34,39 +34,38 @@ class MongoDB:
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
         self.db[f'{collection_prefix}_author'].create_index("id", unique=True)
 
-    def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet'):
-        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
-        if database == 'tweet':
-            self.default_logger.info(f'Retrieve records from database {collection_prefix}')
-            return [record for record in
-                    self.db[f'{collection_prefix}_tweet'].find({},
-                                                               {"_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1})]
+    def drop_collection(self, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        if input(f'CAUTION: DO YOU WANT TO CLEAN {collection_name} Database? (Y/N) ') == "Y" and input(
+                'DOUBLE CHECK (Y/N) ') == 'Y':
+            self.db[collection_name].drop()
+
+    def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False) -> list:
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.default_logger.info(f'Retrieve records from database {collection_name}')
+        select_filed = {"_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1} \
+            if ra_raw else {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
+        return [record for record in self.db[collection_name].find({}, select_filed)]
+
+    def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        return self.db[collection_name].find().count()
 
     def remove_many(self, field, input_date: date, ticker: str, database: str = 'tweet'):
-        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
-        self.db[f'{collection_prefix}_{database}'].update_many({}, {'$unset': {field: ''}})
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.db[collection_name].update_many({}, {'$unset': {field: ''}})
 
     def update_one(self, ref, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
-        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
-        if database == 'tweet':
-            self.db[f'{collection_prefix}_tweet'].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
-            self.default_logger.info(f'Update {ref} in {collection_prefix}_tweet')
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.db[collection_name].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
+        self.default_logger.info(f'Update {ref} in {collection_name}')
 
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
-        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
-        if database == 'tweet':
-            try:
-                result = self.db[f'{collection_prefix}_tweet'].insert_many(record_list, ordered=False,
-                                                                           bypass_document_validation=True)
-                self.default_logger.info(
-                    f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
-            except BulkWriteError as e:
-                self.default_logger.warn("Duplicate Entries detected.")
-        elif database == 'author':
-            try:
-                result = self.db[f'{collection_prefix}_author'].insert_many(record_list, ordered=False,
-                                                                            bypass_document_validation=True)
-                self.default_logger.info(
-                    f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
-            except BulkWriteError as e:
-                self.default_logger.warn("Duplicate Entries detected.")
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        try:
+            result = self.db[collection_name].insert_many(record_list, ordered=False,
+                                                               bypass_document_validation=True)
+            self.default_logger.info(
+                f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
+        except BulkWriteError as e:
+            self.default_logger.warn("Duplicate Entries detected.")
