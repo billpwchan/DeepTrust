@@ -8,7 +8,8 @@ from datetime import date
 import numpy as np
 import requests
 from tqdm import trange
-
+import gc
+gc.enable()
 import numpy as np
 import torch
 from transformers import (
@@ -25,7 +26,7 @@ from util import *
 SUB_PROCESSES = []
 
 DETECTOR_MAP = {
-    'detectors':            ('gpt-2', 'grover'),
+    'detectors':            ('gpt-2'),
     'gpt-detector':         'detector-large.pt',
     'gltr-detector':        ('gpt2-xl', 'BERT'),
     'gpt-detector-server':  'http://localhost:8080/',
@@ -368,8 +369,8 @@ class ReliabilityAssessment:
 
     def neural_fake_news_detection(self, gpt_2: bool, gltr: bool):
         # Always clean up fields before starting!
-        if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
-            self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
+        # if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
+        #     self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
 
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])

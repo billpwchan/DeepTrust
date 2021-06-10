@@ -24,7 +24,7 @@ def main():
 
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
-                        choices=['gpt-2', 'gltr', 'neural-train', 'neural-verify'])
+                        choices=['gpt-2', 'gltr', 'neural-train', 'neural-update', 'neural-verify'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -54,7 +54,7 @@ def main():
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
         if 'neural-train' in args.ra_tasks:
             ra_instance.train_neural_fake_news_verifier()
-        if 'neural-verify' in args.ra_tasks:
+        if 'neural-update' in args.ra_tasks:
             ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.ra_tasks), gltr=('gltr' in args.ra_tasks))
 
 
