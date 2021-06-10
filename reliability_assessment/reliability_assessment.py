@@ -5,6 +5,7 @@ import gc
 import json
 import pathlib
 import subprocess
+import time
 from datetime import date
 
 import numpy as np
@@ -317,10 +318,17 @@ class NeuralVerifier:
             url = f"{DETECTOR_MAP['gpt-detector-server']}?={text.replace('#', '')}"
             payload = {}
             headers = {}
-            response = requests.request("GET", url, headers=headers, data=payload)
+            response = None
+            for retry_limit in range(5):
+                try:
+                    response = requests.request("GET", url, headers=headers, data=payload)
+                    break
+                except requests.exceptions.ConnectionError:
+                    time.sleep(1)
+                    continue
             # self.default_logger.info(f'{mode}: {response.text}')
             # Return a dict representation of the returned text
-            return ast.literal_eval(response.text)
+            return ast.literal_eval(response.text) if response is not None else {}
         elif mode == 'gltr':
             output_data = []
             for gltr_type, gltr_server in zip(DETECTOR_MAP['gltr-detector'], DETECTOR_MAP['gltr-detector-server']):
@@ -332,8 +340,16 @@ class NeuralVerifier:
                 headers = {
                     'Content-Type': 'application/json'
                 }
-                response = requests.request("POST", url, headers=headers, data=payload)
-                if response.ok:
+                response = None
+                for retry_limit in range(5):
+                    try:
+                        response = requests.request("POST", url, headers=headers, data=payload)
+                        break
+                    except requests.exceptions.ConnectionError:
+                        time.sleep(1)
+                        continue
+
+                if response is not None and response.ok:
                     gltr_result = json.loads(response.text)['result']
                     # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
                     frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
@@ -376,7 +392,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 30 # Good for 1080 Ti
+            SLICES = 30  # Good for 1080 Ti
             gpt_collection = self.db_instance.get_non_updated_tweets('ra_raw.RoBERTa-detector',
                                                                      self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
@@ -433,11 +449,7 @@ class ReliabilityAssessment:
                 file_handle.writelines(f"{tweet}\n" for tweet in value)
 
     def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
-        # run_clm.py - -model_name_or_path
-        # gpt2 - medium - -model_type
-        # gpt2 - -train_data_file. / detector_dataset / TWTR_2021 - 04 - 30
-        # _train.txt - -eval_data_file. / detector_dataset / TWTR_2021 - 04 - 30
-        # _test.txt - -line_by_line - -do_train - -do_eval - -output_dir / tmp - -overwrite_output_dir
+
         print("Let's train the GPT-2 for Tweets! ")
 
     def neural_fake_news_generation(self, model_type, model_name_or_path):
