@@ -397,7 +397,7 @@ class ReliabilityAssessment:
 
         if gltr:
             self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
-            SLICES = 3
+            SLICES = 2
             gltr_collection = [tweet for tweet in self.tweets_collection if
                                not ('ra_raw' in tweet and
                                     f"{DETECTOR_MAP['gltr-detector'][0]}-detector" in tweet['ra_raw'] and
@@ -418,6 +418,7 @@ class ReliabilityAssessment:
                     self.db_instance.update_one(future.result()['_id'],
                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
                                                 future.result()['output'][1], self.input_date, self.ticker)
+                gc.collect()
             [p.kill() for p in SUB_PROCESSES]
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")

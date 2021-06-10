@@ -254,8 +254,10 @@ class BERTLM(AbstractLanguageChecker):
                 cur_input_batch.append(tokens_tensor)
                 cur_target_batch.append(y[:, mask_index + 1])
                 # new_segments = segments_tensor[:, min_index:max_index]
-            cur_input_batch = torch.cat(cur_input_batch, dim=0)
-            cur_target_batch = torch.cat(cur_target_batch, dim=0)
+            if len(cur_input_batch) != 0:
+                cur_input_batch = torch.cat(cur_input_batch, dim=0)
+            if len(cur_target_batch) != 0:
+                cur_target_batch = torch.cat(cur_target_batch, dim=0)
             input_batches.append(cur_input_batch)
             target_batches.append(cur_target_batch)
 
@@ -307,62 +309,5 @@ class BERTLM(AbstractLanguageChecker):
             token = '\u0120' + token
         if with_break:
             token = '\u010A' + token
-        #
-        # # print ('....', token)
+
         return token
-
-
-def main():
-    raw_text = """
-    In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English.
-
-    The scientist named the population, after their distinctive horn, Ovid’s Unicorn. These four-horned, silver-white unicorns were previously unknown to science.
-
-    Now, after almost two centuries, the mystery of what sparked this odd phenomenon is finally solved.
-
-    Dr. Jorge Pérez, an evolutionary biologist from the University of La Paz, and several companions, were exploring the Andes Mountains when they found a small valley, with no other animals or humans. Pérez noticed that the valley had what appeared to be a natural fountain, surrounded by two peaks of rock and silver snow.
-
-    Pérez and the others then ventured further into the valley. “By the time we reached the top of one peak, the water looked blue, with some crystals on top,” said Pérez.
-
-    Pérez and his friends were astonished to see the unicorn herd. These creatures could be seen from the air without having to move too much to see them – they were so close they could touch their horns.
-
-    While examining these bizarre creatures the scientists discovered that the creatures also spoke some fairly regular English. Pérez stated, “We can see, for example, that they have a common ‘language,’ something like a dialect or dialectic.”
-
-    Dr. Pérez believes that the unicorns may have originated in Argentina, where the animals were believed to be descendants of a lost race of people who lived there before the arrival of humans in those parts of South America.
-
-    While their origins are still unclear, some believe that perhaps the creatures were created when a human and a unicorn met each other in a time before human civilization. According to Pérez, “In South America, such incidents seem to be quite common.”
-
-    However, Pérez also pointed out that it is likely that the only way of knowing for sure if unicorns are indeed the descendants of a lost alien race is through DNA. “But they seem to be able to communicate in English quite well, which I believe is a sign of evolution, or at least a change in social organization,” said the scientist.
-    """
-    raw_text = """
-    In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English.
-    """
-
-    '''
-    Tests for BERT
-    '''
-    lm = BERTLM()
-    start = time.time()
-    payload = lm.check_probabilities(raw_text, topk=5)
-    end = time.time()
-    print("{:.2f} Seconds for a run with BERT".format(end - start))
-    # print("SAMPLE:", sample)
-
-    '''
-    Tests for GPT-2
-    '''
-    lm = LM()
-    start = time.time()
-    payload = lm.check_probabilities(raw_text, topk=5)
-    end = time.time()
-    print("{:.2f} Seconds for a check with GPT-2".format(end - start))
-
-    start = time.time()
-    sample = lm.sample_unconditional()
-    end = time.time()
-    print("{:.2f} Seconds for a sample from GPT-2".format(end - start))
-    print("SAMPLE:", sample)
-
-
-if __name__ == "__main__":
-    main()
