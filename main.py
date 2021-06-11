@@ -24,7 +24,9 @@ def main():
 
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
-                        choices=['gpt-2', 'gltr', 'neural-generate', 'neural-update', 'neural-verify'])
+                        choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-verify'])
+    parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
+                        choices=['gpt-2', 'gltr'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -52,11 +54,13 @@ def main():
 
     if args.module == 'RA':
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)
+        if 'feature-filter' in args.ra_tasks:
+            ra_instance.feature_filter()
         if 'neural-generate' in args.ra_tasks:
             ra_instance.neural_fake_news_dataset_handle()
             # ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='gpt2-medium')
         if 'neural-update' in args.ra_tasks:
-            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.ra_tasks), gltr=('gltr' in args.ra_tasks))
+            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models), gltr=('gltr' in args.models))
 
 
 if __name__ == '__main__':

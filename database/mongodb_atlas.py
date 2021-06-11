@@ -34,6 +34,18 @@ class MongoDB:
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
         self.db[f'{collection_prefix}_author'].create_index("id", unique=True)
 
+    def duplicate_collection(self, input_date: date, ticker: str, source: str = 'tweet', target: str = 'tweet_dump'):
+        collist = self.db.list_collection_names()
+        collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
+        if f'{collection_prefix}_{target}' in collist:
+            self.default_logger.warn(f'{collection_prefix}_tweet collection already exists.')
+            if input("Delete? (Y/N) ") == "Y":
+                self.db[f'{collection_prefix}_{target}'].drop()
+
+        # Duplicate the tweet database to a clean one for referencing later.
+        self.db[f'{collection_prefix}_{source}'].aggregate([{'$match': {}}, {'$out': f'{collection_prefix}_{target}'}])
+        self.default_logger.info(f"Cloned collection {collection_prefix}_{source} to {collection_prefix}_{target}")
+
     def drop_collection(self, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         if input(f'CAUTION: DO YOU WANT TO CLEAN {collection_name} Database? (Y/N) ') == "Y" and input(

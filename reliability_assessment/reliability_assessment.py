@@ -380,6 +380,13 @@ class ReliabilityAssessment:
     def __remove_non_ascii(text):
         return ''.join((c for c in text if 0 < ord(c) < 127))
 
+    def feature_filter(self):
+        """
+        Need to firstly filter out some information from the tweets collection.
+        Remove tweets with no public_metrics, and authors with no public_metrics
+        """
+        self.db_instance.duplicate_collection(self.input_date, self.ticker, source='tweet', target='tweet_dump')
+
     def detector_wrapper(self, tweet, mode):
         tweet_text = self.__remove_non_ascii(tweet['text'])
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
