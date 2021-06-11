@@ -21,12 +21,12 @@ class MongoDB:
         collist = self.db.list_collection_names()
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if f'{collection_prefix}_tweet' in collist:
-            self.default_logger.warn(f'{collection_prefix}_tweet collection already exists.')
+            self.default_logger.warning(f'{collection_prefix}_tweet collection already exists.')
             if input("Delete? (Y/N) ") == "Y":
                 self.db[f'{collection_prefix}_tweet'].drop()
 
         if f'{collection_prefix}_author' in collist:
-            self.default_logger.warn(f'{collection_prefix}_author collection already exists.')
+            self.default_logger.warning(f'{collection_prefix}_author collection already exists.')
             if input("Delete? (Y/N) ") == "Y":
                 self.db[f'{collection_prefix}_author'].drop()
 
@@ -38,7 +38,7 @@ class MongoDB:
         collist = self.db.list_collection_names()
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if f'{collection_prefix}_{target}' in collist:
-            self.default_logger.warn(f'{collection_prefix}_{target} collection already exists.')
+            self.default_logger.warning(f'{collection_prefix}_{target} collection already exists.')
             if input("Delete? (Y/N) ") == "Y":
                 self.db[f'{collection_prefix}_{target}'].drop()
 
@@ -120,4 +120,4 @@ class MongoDB:
             self.default_logger.info(
                 f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
         except BulkWriteError as e:
-            self.default_logger.warn("Duplicate Entries detected.")
+            self.default_logger.warning("Duplicate Entries detected.")

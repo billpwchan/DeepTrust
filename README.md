@@ -28,31 +28,49 @@ conclude the practicality of the DeepTrust framework in fulfilling its objective
 ## How to Install
 
 Open Anaconda Prompt in you computer, and type the following command to create an environment.
+
 ```commandline
 conda env create -f environment.yml
 ```
 
 To export current environment, use the following command
+
 ```commandline
 conda env export > environment.yml
 ```
 
-
 ## Command-line Interface Usages
 
-Retrieve a list of anomalies in `TWTR` (Twitter) pricing data between `04/01/2021` and `20/05/2021` using ARIMA-based
-detection method.
+### Anomaly Detection Module Examples
+
+Retrieve a list of anomalies in `TWTR` (Twitter Inc.) pricing data between `04/01/2021` and `20/05/2021` using
+ARIMA-based detection method.
 
 ```bash
 python main.py -m AD -t TWTR -sd 04/01/2021 -ed 20/05/2021 --ad_method arima
 ```
 
-Collect correlated tweets from Twitter data stream of `TSLA` (Tesla) regards to a detected financial anomaly on 22 Feb
+The date format for both `-sd` and `-ed` parameters follows UK time format.
 
-2021. Data will be stored in the MongoDB database as specified in the `config.ini` file.
+Available `--ad_method` includes `['arima', 'lof', 'if]`, which stands for `AUTO-ARIMA`, `Local Outlier Factor` and
+`Isolation Forest`.
+
+### Information Retrieval Module Examples
+
+Collect correlated tweets from Twitter data stream of `TWTR` (Twitter Inc.) regards to a detected financial anomaly on
+30 April 2021. Data will be stored in the MongoDB database as specified in the `config.ini` file.
 
 ```bash
-python main.py -m IR -ad 22/02/2021 -t TSLA
+python main.py -m IR -t TWTR -ad 30/04/2021
+```
+
+### Reliability Assessment Module Examples
+
+Feature-based filtering on the retrieved collection of tweets (e.g., Remove tweets with no public metrics -
+Retweets/Likes/Quotes). Rules can be specified in the `config.ini` under `RA.Feature.Config`.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat feature-filter
 ```
 
 ## Important Notes
@@ -97,12 +115,15 @@ PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP = {
 ```
 
 To fine-tune GPT-2-medium for Tweets
+
 ```commandline
 python run_clm.py --model_name_or_path gpt2-medium --model_type gpt2 --train_data_file ./detector_dataset/TWTR_2021-04-30_train.txt --eval_data_file ./detector_dataset/TWTR_2021-04-30_test.txt --line_by_line --do_train --do_eval --output_dir \tmp --overwrite_output_dir --per_gpu_train_batch_size 1 --per_gpu_eval_batch_size 1 --learning_rate 0.0004 --save_steps 10000```
+```
 
 ## Future Plans
 
-- [ ] Information Retrieval Modules
+- [x] Anomaly Detection module
+- [x] Information Retrieval Module
 - [ ] Reliability Assessment Module
 
 -----------
