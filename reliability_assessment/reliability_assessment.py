@@ -421,7 +421,7 @@ class ReliabilityAssessment:
 
         # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False)
+                                                            ra_raw=False, feature_filter=False)
         authors_collection = self.db_instance.get_all_authors(self.input_date, self.ticker, database='author')
 
         # Initialize Feature Records
@@ -498,7 +498,8 @@ class ReliabilityAssessment:
 
     def neural_fake_news_dataset_handle(self):
         tweets_collection = [tweet['text'].replace("\n", "") for tweet in
-                             self.db_instance.get_all_tweets(self.input_date, self.ticker, ra_raw=False)]
+                             self.db_instance.get_all_tweets(self.input_date, self.ticker,
+                                                             ra_raw=False, feature_filter=True)]
 
         train, test = np.split(np.array(tweets_collection), [int(len(tweets_collection) * 0.8)])
         for index, value in {'train': train, 'test': test}.items():
@@ -519,13 +520,15 @@ class ReliabilityAssessment:
         self.db_instance.drop_collection(self.input_date, self.ticker, database='fake')
 
         tg_instance = TweetGeneration()
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, ra_raw=False)
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker,
+                                                            ra_raw=False, feature_filter=True)
 
         SLICES = 3
         for i in trange(0, len(tweets_collection), SLICES):
-            tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if not
-            self.db_instance.check_record_exists("original_id", tweet['id'], self.input_date,
-                                                 self.ticker, database='fake')]
+            tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if
+                                       not self.db_instance.check_record_exists("original_id", tweet['id'],
+                                                                                self.input_date,
+                                                                                self.ticker, database='fake')]
 
             for tweet in tweets_collection_small:
                 fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}

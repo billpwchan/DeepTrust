@@ -56,12 +56,16 @@ class MongoDB:
                 'DOUBLE CHECK (Y/N) ') == 'Y':
             self.db[collection_name].drop()
 
-    def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False) -> list:
+    def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
+                       feature_filter: bool = True) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
-        select_filed = {"_id": 1, "author_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1} \
-            if ra_raw else {"_id": 1, "author_id": 1, "id": 1, "text": 1, "public_metrics": 1}
-        return [record for record in self.db[collection_name].find({}, select_filed)]
+        feature_filed = {"$and": [
+            {'ra_raw.feature-filter': {'$exists': True}},
+            {'ra_raw.feature-filter': True}]
+        } if feature_filter else {}
+        unselect_filed = {} if ra_raw else {'ra_raw': 0}
+        return [record for record in self.db[collection_name].find(feature_filed, unselect_filed)]
 
     def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
