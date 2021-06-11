@@ -448,7 +448,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 30  # Good for 1080 Ti
+            SLICES = 10  # Good for 1080 Ti
             gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
                                                                             self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
@@ -461,11 +461,12 @@ class ReliabilityAssessment:
                                      tweets_collection_small]
 
                 # Update MongoDB
-                for future in gpt_2_futures:
-                    self.db_instance.update_one(future.result()['_id'], 'ra_raw.RoBERTa-detector',
-                                                future.result()['output'],
-                                                self.input_date, self.ticker)
-                    gc.collect()
+                # for future in gpt_2_futures:
+                self.db_instance.update_one_bulk([future.result()['_id'] for future in gpt_2_futures],
+                                                 'ra_raw.RoBERTa-detector',
+                                                 [future.result()['output'] for future in gpt_2_futures],
+                                                 self.input_date, self.ticker)
+                gc.collect()
             # Kill GPT-2 Process
             [p.kill() for p in SUB_PROCESSES]
 
