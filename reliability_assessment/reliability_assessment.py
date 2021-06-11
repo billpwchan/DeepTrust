@@ -461,7 +461,6 @@ class ReliabilityAssessment:
                                      tweets_collection_small]
 
                 # Update MongoDB
-                # for future in gpt_2_futures:
                 self.db_instance.update_one_bulk([future.result()['_id'] for future in gpt_2_futures],
                                                  'ra_raw.RoBERTa-detector',
                                                  [future.result()['output'] for future in gpt_2_futures],
@@ -483,13 +482,15 @@ class ReliabilityAssessment:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
                                     tweets_collection_small]
-                for future in gltr_futures:
-                    self.db_instance.update_one(future.result()['_id'],
-                                                f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
-                                                future.result()['output'][0], self.input_date, self.ticker)
-                    self.db_instance.update_one(future.result()['_id'],
-                                                f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
-                                                future.result()['output'][1], self.input_date, self.ticker)
+
+                self.db_instance.update_one_bulk([future.result()['_id'] for future in gltr_futures],
+                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
+                                                 [future.result()['output'][0] for future in gltr_futures],
+                                                 self.input_date, self.ticker)
+                self.db_instance.update_one_bulk([future.result()['_id'] for future in gltr_futures],
+                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
+                                                 [future.result()['output'][1] for future in gltr_futures],
+                                                 self.input_date, self.ticker)
                 gc.collect()
             [p.kill() for p in SUB_PROCESSES]
 
