@@ -2,7 +2,7 @@ from datetime import date
 
 import pymongo
 import configparser
-
+from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
 from util import logger
@@ -38,13 +38,17 @@ class MongoDB:
         collist = self.db.list_collection_names()
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if f'{collection_prefix}_{target}' in collist:
-            self.default_logger.warn(f'{collection_prefix}_tweet collection already exists.')
+            self.default_logger.warn(f'{collection_prefix}_{target} collection already exists.')
             if input("Delete? (Y/N) ") == "Y":
                 self.db[f'{collection_prefix}_{target}'].drop()
 
-        # Duplicate the tweet database to a clean one for referencing later.
-        self.db[f'{collection_prefix}_{source}'].aggregate([{'$match': {}}, {'$out': f'{collection_prefix}_{target}'}])
-        self.default_logger.info(f"Cloned collection {collection_prefix}_{source} to {collection_prefix}_{target}")
+        if f'{collection_prefix}_{target}' not in collist:
+            # Duplicate the tweet database to a clean one for referencing later.
+            self.db[f'{collection_prefix}_{source}'].aggregate(
+                [{'$match': {}}, {'$out': f'{collection_prefix}_{target}'}])
+            self.default_logger.info(f"Cloned collection {collection_prefix}_{source} to {collection_prefix}_{target}")
+        else:
+            self.default_logger.info(f'Operation Cancelled: {collection_prefix}_{target} collection already exists')
 
     def drop_collection(self, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
@@ -55,16 +59,25 @@ class MongoDB:
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
-        select_filed = {"_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1} \
-            if ra_raw else {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
+        select_filed = {"_id": 1, "author_id": 1, "text": 1, "public_metrics": 1, "ra_raw": 1} \
+            if ra_raw else {"_id": 1, "author_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         return [record for record in self.db[collection_name].find({}, select_filed)]
 
-    def get_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
-                               select_field=None):
+    def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.default_logger.info(f'Retrieve records from database {collection_name}')
+        return [record for record in self.db[collection_name].find({})]
+
+    def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
+                                      select_field=None):
         if select_field is None:
             select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        return [record for record in self.db[collection_name].find({field: {'$exists': False}}, select_field)]
+        return [record for record in self.db[collection_name].find({"$and": [
+            {'ra_raw.feature-filter': {'$exists': True}},
+            {'ra_raw.feature-filter': True},
+            {field: {'$exists': False}},
+        ]}, select_field)]
 
     def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
@@ -74,14 +87,30 @@ class MongoDB:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         return self.db[collection_name].find({field: value}).count() > 0
 
-    def remove_many(self, field, input_date: date, ticker: str, database: str = 'tweet'):
+    def remove_all(self, field, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        self.db[collection_name].update_many({}, {'$unset': {field: ''}})
+        result = self.db[collection_name].update({}, {'$unset': {field: ''}}, multi=True)
+        self.default_logger.info(f'Update {result} in {collection_name}')
+
+    def update_all(self, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        result = self.db[collection_name].update_many({}, {'$set': {field: entry}}, upsert=True)
+        self.default_logger.info(f'Update {result.upserted_id} in {collection_name}')
 
     def update_one(self, ref, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        self.db[collection_name].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
-        self.default_logger.info(f'Update {ref} in {collection_name}')
+        result = self.db[collection_name].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
+        self.default_logger.info(f'Update {result.upserted_id} in {collection_name}')
+
+    def update_one_bulk(self, ref_list: list, field, entry_list: list, input_date: date, ticker: str,
+                        database: str = 'tweet'):
+        assert len(ref_list) == len(entry_list)
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        operations = [
+            UpdateOne({'_id': ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in zip(ref_list, entry_list)
+        ]
+        result = self.db[collection_name].bulk_write(operations)
+        self.default_logger.info(f'Update {result.upserted_ids} in {collection_name}')
 
     def insert_many(self, input_date: date, ticker: str, record_list, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'

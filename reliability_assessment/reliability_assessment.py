@@ -1,6 +1,7 @@
 import ast
 import atexit
 import concurrent.futures
+import configparser
 import gc
 import json
 import pathlib
@@ -373,19 +374,67 @@ class ReliabilityAssessment:
         self.nv_instance = NeuralVerifier()
         self.db_instance = MongoDB()
         self.default_logger = logger.get_logger('reliability_assessment')
-
+        self.config = configparser.ConfigParser()
+        self.config.read('./config.ini')
         atexit.register(lambda: [p.kill() for p in SUB_PROCESSES])
 
     @staticmethod
     def __remove_non_ascii(text):
         return ''.join((c for c in text if 0 < ord(c) < 127))
 
+    def __tweet_feature_rules(self, tweet) -> bool:
+        """
+        TRUE means it satisfy the condition specified in the config. Should not remove those that return True.
+        :param tweet:
+        :return: bool
+        """
+        # Need to have at least some interactions with the network
+        public_metrics = tweet['public_metrics']
+        if public_metrics['retweet_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_retweet') or \
+                public_metrics['reply_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_reply') or \
+                public_metrics['like_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_like') or \
+                public_metrics['quote_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_quote'):
+            return True
+        return False
+
+    def __author_feature_rules(self, author) -> bool:
+        """
+        TRUE means it satisfy the condition specified in the config. Should not remove those that return True.
+        :param author:
+        :return: bool
+        """
+        public_metrics = author['public_metrics']
+        if public_metrics['followers_count'] > self.config.getint('RA.Feature.Config', 'min_author_followers') or \
+                public_metrics['following_count'] > self.config.getint('RA.Feature.Config', 'min_author_following') or \
+                public_metrics['tweet_count'] > self.config.getint('RA.Feature.Config', 'min_author_tweet') or \
+                public_metrics['listed_count'] > self.config.getint('RA.Feature.Config', 'min_author_listed'):
+            return True
+        return False
+
     def feature_filter(self):
         """
         Need to firstly filter out some information from the tweets collection.
         Remove tweets with no public_metrics, and authors with no public_metrics
         """
+        # Always make a backup before doing any DB stuff!
         self.db_instance.duplicate_collection(self.input_date, self.ticker, source='tweet', target='tweet_dump')
+
+        # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False)
+        authors_collection = self.db_instance.get_all_authors(self.input_date, self.ticker, database='author')
+
+        # Initialize Feature Records
+        self.db_instance.update_all('ra_raw.feature-filter', False, self.input_date, self.ticker)
+
+        # Append a field in the ra_raw.feature-filter
+        authors_collection[:] = [author for author in authors_collection if self.__author_feature_rules(author)]
+        authors_id = [author['id'] for author in authors_collection]
+        tweets_collection[:] = [tweet for tweet in tweets_collection if
+                                self.__tweet_feature_rules(tweet) and tweet['author_id'] in authors_id]
+
+        self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection], 'ra_raw.feature-filter',
+                                         [True for i in range(len(tweets_collection))], self.input_date, self.ticker)
 
     def detector_wrapper(self, tweet, mode):
         tweet_text = self.__remove_non_ascii(tweet['text'])
@@ -400,8 +449,8 @@ class ReliabilityAssessment:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
             SLICES = 30  # Good for 1080 Ti
-            gpt_collection = self.db_instance.get_non_updated_tweets('ra_raw.RoBERTa-detector',
-                                                                     self.input_date, self.ticker)
+            gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
+                                                                            self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
             for i in trange(0, len(gpt_collection), SLICES):
@@ -423,7 +472,7 @@ class ReliabilityAssessment:
         if gltr:
             self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
             SLICES = 2
-            gltr_collection = self.db_instance.get_non_updated_tweets(
+            gltr_collection = self.db_instance.get_neural_non_updated_tweets(
                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector", self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
 
