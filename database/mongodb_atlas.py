@@ -41,7 +41,7 @@ class MongoDB:
             self.default_logger.warning(f'{collection_prefix}_{target} collection already exists.')
             if input("Delete? (Y/N) ") == "Y":
                 self.db[f'{collection_prefix}_{target}'].drop()
-
+        collist = self.db.list_collection_names()
         if f'{collection_prefix}_{target}' not in collist:
             # Duplicate the tweet database to a clean one for referencing later.
             self.db[f'{collection_prefix}_{source}'].aggregate(
