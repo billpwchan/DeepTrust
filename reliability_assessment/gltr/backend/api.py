@@ -183,7 +183,7 @@ class LM(AbstractLanguageChecker):
 
 @register_api(name='BERT')
 class BERTLM(AbstractLanguageChecker):
-    def __init__(self, model_name_or_path="bert-large-cased"):
+    def __init__(self, model_name_or_path="bert-base-cased"):
         super(BERTLM, self).__init__()
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
