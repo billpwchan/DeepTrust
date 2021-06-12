@@ -508,7 +508,6 @@ class ReliabilityAssessment:
                 file_handle.writelines(f"{tweet}\n" for tweet in value)
 
     def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
-
         print("Let's train the GPT-2 for Tweets! ")
 
     def neural_fake_news_generation(self, model_type, model_name_or_path):

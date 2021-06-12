@@ -58,7 +58,8 @@ def main():
             ra_instance.feature_filter()
         if 'neural-generate' in args.ra_tasks:
             ra_instance.neural_fake_news_dataset_handle()
-            # ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='gpt2-medium')
+            ra_instance.neural_fake_news_generator_fine_tune(model_type='gpt2', model_name_or_path='gpt2-medium')
+            ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='gpt2-medium')
         if 'neural-update' in args.ra_tasks:
             ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models), gltr=('gltr' in args.models))
 
