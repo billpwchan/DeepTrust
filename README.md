@@ -117,8 +117,9 @@ PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP = {
 To fine-tune GPT-2-medium for Tweets
 
 ```commandline
-python run_clm.py --model_name_or_path gpt2-medium --model_type gpt2 --train_data_file ./detector_dataset/TWTR_2021-04-30_train.txt --eval_data_file ./detector_dataset/TWTR_2021-04-30_test.txt --line_by_line --do_train --do_eval --output_dir \tmp --overwrite_output_dir --per_gpu_train_batch_size 1 --per_gpu_eval_batch_size 1 --learning_rate 0.0004 --save_steps 10000 --logging_steps 50
+python run_clm.py --model_name_or_path gpt2-medium --model_type gpt2 --train_data_file ./detector_dataset/TWTR_2021-04-30_train.txt --eval_data_file ./detector_dataset/TWTR_2021-04-30_test.txt --line_by_line --do_train --do_eval --output_dir \tmp --overwrite_output_dir --per_gpu_train_batch_size 1 --per_gpu_eval_batch_size 1 --learning_rate 5e-5 --save_steps 10000 --logging_steps 50
 ```
+
 ## Future Plans
 
 - [x] Anomaly Detection module
