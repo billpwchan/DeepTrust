@@ -385,7 +385,7 @@ class ReliabilityAssessment:
 
     @staticmethod
     def __remove_twitter_link(text) -> str:
-        return re.sub(r'https://t.co/\w*$', '', text)
+        return re.sub(r'https://t.co/.*$', '', text)
 
     def __tweet_feature_rules(self, tweet) -> bool:
         """
