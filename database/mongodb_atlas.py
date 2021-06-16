@@ -60,7 +60,8 @@ class MongoDB:
 
     @staticmethod
     def __tweet_preprocess(text) -> str:
-        return emoji.demojize(re.sub(r'https://t.co/\w*$', '', text))
+        # Remove Twitter embedded links
+        return re.sub(r'https://t.co/\w*$', '', text)
 
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
                        feature_filter: bool = True) -> list:
