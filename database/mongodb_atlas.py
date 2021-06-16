@@ -1,6 +1,7 @@
 import re
 from datetime import date
 
+import emoji
 import pymongo
 import configparser
 from pymongo import UpdateOne
@@ -58,8 +59,8 @@ class MongoDB:
             self.db[collection_name].drop()
 
     @staticmethod
-    def __remove_twitter_link(text) -> str:
-        return re.sub(r'https://t.co/\w*$', '', text)
+    def __tweet_preprocess(text) -> str:
+        return emoji.demojize(re.sub(r'https://t.co/\w*$', '', text))
 
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
                        feature_filter: bool = True) -> list:
@@ -70,7 +71,7 @@ class MongoDB:
             {'ra_raw.feature-filter': True}]
         } if feature_filter else {}
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
-        return [MongoDB.__remove_twitter_link(record) for record in
+        return [MongoDB.__tweet_preprocess(record) for record in
                 self.db[collection_name].find(feature_filed, unselect_filed)]
 
     def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
@@ -83,7 +84,7 @@ class MongoDB:
         if select_field is None:
             select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        return [MongoDB.__remove_twitter_link(record) for record in self.db[collection_name].find({"$and": [
+        return [MongoDB.__tweet_preprocess(record) for record in self.db[collection_name].find({"$and": [
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True},
             {field: {'$exists': False}},

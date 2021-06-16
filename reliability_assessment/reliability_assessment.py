@@ -5,7 +5,6 @@ import configparser
 import gc
 import json
 import pathlib
-import re
 import subprocess
 import time
 from datetime import date
@@ -418,7 +417,7 @@ class ReliabilityAssessment:
         Remove tweets with no public_metrics, and authors with no public_metrics
         """
         # Always make a backup before doing any DB stuff!
-        self.db_instance.duplicate_collection(self.input_date, self.ticker, source='tweet', target='tweet_dump')
+        # self.db_instance.duplicate_collection(self.input_date, self.ticker, source='tweet', target='tweet_dump')
 
         # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
