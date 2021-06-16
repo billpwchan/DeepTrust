@@ -418,7 +418,7 @@ class ReliabilityAssessment:
 
     @staticmethod
     def __tweet_preprocess(text) -> str:
-        text = ReliabilityAssessment.__remove_twitter_link(text)
+        text = ReliabilityAssessment.__remove_twitter_link(text.strip())
         text = ReliabilityAssessment.__remove_non_ascii(text)
         return text
 
