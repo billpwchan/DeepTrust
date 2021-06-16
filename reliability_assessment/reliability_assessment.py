@@ -418,6 +418,13 @@ class ReliabilityAssessment:
 
     @staticmethod
     def __tweet_preprocess(text) -> str:
+        """
+        1. Remove leading and trailing spaces
+        2. Remove useless Twitter link at the end
+        3. Remove non-ascii characters that cannot be processed by detector.
+        :param text:
+        :return:
+        """
         text = ReliabilityAssessment.__remove_twitter_link(text.strip())
         text = ReliabilityAssessment.__remove_non_ascii(text)
         return text
