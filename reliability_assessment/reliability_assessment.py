@@ -5,6 +5,7 @@ import configparser
 import gc
 import json
 import pathlib
+import re
 import subprocess
 import time
 from datetime import date
@@ -379,8 +380,12 @@ class ReliabilityAssessment:
         atexit.register(lambda: [p.kill() for p in SUB_PROCESSES])
 
     @staticmethod
-    def __remove_non_ascii(text):
+    def __remove_non_ascii(text) -> str:
         return ''.join((c for c in text if 0 < ord(c) < 127))
+
+    @staticmethod
+    def __remove_twitter_link(text) -> str:
+        return re.sub(r'https://t.co/\w*$', '', text)
 
     def __tweet_feature_rules(self, tweet) -> bool:
         """
@@ -411,6 +416,12 @@ class ReliabilityAssessment:
             return True
         return False
 
+    @staticmethod
+    def __tweet_preprocess(text) -> str:
+        text = ReliabilityAssessment.__remove_twitter_link(text)
+        text = ReliabilityAssessment.__remove_non_ascii(text)
+        return text
+
     def feature_filter(self):
         """
         Need to firstly filter out some information from the tweets collection.
@@ -437,7 +448,7 @@ class ReliabilityAssessment:
                                          [True for i in range(len(tweets_collection))], self.input_date, self.ticker)
 
     def detector_wrapper(self, tweet, mode):
-        tweet_text = self.__remove_non_ascii(tweet['text'])
+        tweet_text = self.__tweet_preprocess(tweet['text'])
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
 
     def neural_fake_news_detection(self, gpt_2: bool, gltr: bool):
@@ -448,7 +459,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 10  # Good for 1080 Ti
+            SLICES = 30  # Good for 1080 Ti
             gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
                                                                             self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
@@ -497,7 +508,7 @@ class ReliabilityAssessment:
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
     def neural_fake_news_dataset_handle(self):
-        tweets_collection = [tweet['text'].replace("\n", "") for tweet in
+        tweets_collection = [self.__tweet_preprocess(tweet['text']).replace("\n", "") for tweet in
                              self.db_instance.get_all_tweets(self.input_date, self.ticker,
                                                              ra_raw=False, feature_filter=True)]
 
