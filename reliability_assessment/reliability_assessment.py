@@ -9,6 +9,7 @@ import re
 import subprocess
 import time
 from datetime import date
+from random import randint
 
 import numpy as np
 import requests
@@ -516,8 +517,9 @@ class ReliabilityAssessment:
 
     def neural_fake_news_dataset_handle(self):
         tweets_collection = [self.__tweet_preprocess(tweet['text']).replace("\n", "") for tweet in
-                             self.db_instance.get_all_tweets(self.input_date, self.ticker,
-                                                             ra_raw=False, feature_filter=True)]
+                             self.db_instance.get_roberta_threshold_tweets(
+                                 self.config.getfloat('RA.Neural.Config', 'roberta_threshold'),
+                                 self.input_date, self.ticker)]
 
         train, test = np.split(np.array(tweets_collection), [int(len(tweets_collection) * 0.8)])
         for index, value in {'train': train, 'test': test}.items():
@@ -553,8 +555,8 @@ class ReliabilityAssessment:
                                tg_instance.tweet_generation(model_type=model_type,
                                                             model_name_or_path=model_name_or_path,
                                                             prompt=tweet['text'][
-                                                                   # :randint(2, int(len(tweet['text']) / 2))],
-                                                                   :2],
+                                                                   :randint(2, int(len(tweet['text']) / 3))],
+                                                                   # :2],
                                                             temperature=1, num_return_sequences=2, no_cuda=False)]
 
                 self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')

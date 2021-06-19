@@ -114,6 +114,20 @@ PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP = {
 }
 ```
 
+Update ```trainer.py``` for script ```run_clm.py``` for handling NaN loss values. 
+
+```python
+training_loss = self._training_step(model, inputs, optimizer)
+tr_loss += 0 if np.isnan(training_loss) else training_loss
+```
+
+In ```_prediction_loop``` function
+
+```python
+temp_eval_loss = step_eval_loss.mean().item()
+eval_losses += [0 if np.isnan(temp_eval_loss) else temp_eval_loss]
+```
+
 To fine-tune GPT-2-medium for Tweets
 
 ```commandline

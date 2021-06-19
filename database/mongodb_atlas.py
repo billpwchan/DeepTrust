@@ -62,13 +62,19 @@ class MongoDB:
                        feature_filter: bool = True) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
-        feature_filed = {"$and": [
+        feature_field = {"$and": [
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True}]
         } if feature_filter else {}
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
         return [record for record in
-                self.db[collection_name].find(feature_filed, unselect_filed)]
+                self.db[collection_name].find(feature_field, unselect_filed)]
+
+    def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.default_logger.info(f'Retrieve RoBERTa-detector records from database {collection_name}')
+        query = {"ra_raw.RoBERTa-detector.real_probability": {"$gte": threshold}}
+        return [record for record in self.db[collection_name].find(query, {'ra_raw': 0})]
 
     def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
