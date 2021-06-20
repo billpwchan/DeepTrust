@@ -529,7 +529,15 @@ class ReliabilityAssessment:
                 file_handle.writelines(f"{tweet}\n" for tweet in value)
 
     def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
-        print("Let's train the GPT-2 for Tweets! ")
+        gpt_2_fine_tune = subprocess.call(
+            ["python", "./reliability_assessment/run_clm.py", "--model_type", "gpt2",
+             "--model_name_or_path", "gpt2-medium",
+             "--train_data_file",
+             f"./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_train.txt",
+             "--eval_data_file", f"./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_test.txt",
+             "--line_by_line", "--do_train", "--do_eval", "--output_dir", "./gpt_generator", "--overwrite_output_dir",
+             "--per_gpu_train_batch_size", "1", "--per_gpu_eval_batch_size", "1", "--learning_rate", "5e-5",
+             "--save_steps", "50000", "--logging_steps", "50", "--num_train_epochs", "1"])
 
     def generator_wrapper(self, model_type, model_name_or_path, tweet):
         tweet_length = len(tweet['text'].split())
