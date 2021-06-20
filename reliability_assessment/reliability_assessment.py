@@ -179,7 +179,7 @@ class TweetGeneration:
             'fp16':                 fp16
         }
         # Pass dot reference check!
-        args = dotdict(self.args)
+        args = dotdict(args)
 
         if args.fp16:
             self.model.half()
