@@ -545,8 +545,8 @@ class ReliabilityAssessment:
                        for individual_fake_tweet in
                        self.tg_instance.tweet_generation(model_type=model_type,
                                                          model_name_or_path=model_name_or_path,
-                                                         prompt=tweet['text'].split()[
-                                                                :randint(2, int(tweet_length / 3))],
+                                                         prompt=" ".join(tweet['text'].split()[
+                                                                         :randint(2, int(tweet_length / 3))]),
                                                          temperature=1, num_return_sequences=2, no_cuda=False)]
 
     def neural_fake_news_generation(self, model_type, model_name_or_path):
