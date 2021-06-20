@@ -133,4 +133,5 @@ class MongoDB:
             self.default_logger.info(
                 f'Insert to {database} with {len(result.inserted_ids)} ids {result.inserted_ids}')
         except BulkWriteError as e:
+            print(e.details)
             self.default_logger.warning("Duplicate Entries detected.")

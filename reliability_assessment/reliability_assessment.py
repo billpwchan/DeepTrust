@@ -190,7 +190,6 @@ class TweetGeneration:
 
         args.length = TweetGeneration.adjust_length_to_model(args.length,
                                                              max_sequence_length=self.model.config.max_position_embeddings)
-        TweetGeneration.default_logger.info(args)
 
         prompt_text = args.prompt if args.prompt else " "
 
@@ -587,7 +586,7 @@ class ReliabilityAssessment:
 
         self.tg_instance.set_model(model_type, model_name_or_path)
 
-        SLICES = 30
+        SLICES = 60
         for i in trange(0, len(tweets_collection), SLICES):
             tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if
                                        not self.db_instance.check_record_exists("original_id", tweet['id'],
@@ -598,7 +597,6 @@ class ReliabilityAssessment:
                 tweet_futures = [executor.submit(self.generator_wrapper, model_type, model_name_or_path, tweet) for
                                  tweet in tweets_collection_small]
 
-            for future_result in tweet_futures:
-                self.db_instance.insert_many(self.input_date, self.ticker,
-                                             [fake for future_result in tweet_futures for fake in
-                                              future_result.result()], database='fake')
+            self.db_instance.insert_many(self.input_date, self.ticker,
+                                         [fake for future_result in tweet_futures for fake in
+                                          future_result.result()], database='fake')
