@@ -581,8 +581,9 @@ class ReliabilityAssessment:
         """
         self.db_instance.drop_collection(self.input_date, self.ticker, database='fake')
 
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker,
-                                                            ra_raw=False, feature_filter=True)
+        tweets_collection = [tweet for tweet in self.db_instance.get_roberta_threshold_tweets(
+            self.config.getfloat('RA.Neural.Config', 'roberta_threshold'),
+            self.input_date, self.ticker)]
 
         self.tg_instance.set_model(model_type, model_name_or_path)
 
