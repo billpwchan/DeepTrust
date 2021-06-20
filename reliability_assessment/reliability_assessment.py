@@ -550,13 +550,13 @@ class ReliabilityAssessment:
                                                                                 self.ticker, database='fake')]
 
             for tweet in tweets_collection_small:
+                tweet_length = len(tweet['text'].split())
                 fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
                                for individual_fake_tweet in
                                tg_instance.tweet_generation(model_type=model_type,
                                                             model_name_or_path=model_name_or_path,
-                                                            prompt=tweet['text'][
-                                                                   :randint(2, int(len(tweet['text']) / 3))],
-                                                                   # :2],
+                                                            prompt=tweet['text'].split()[
+                                                                   :randint(2, int(tweet_length / 3))],
                                                             temperature=1, num_return_sequences=2, no_cuda=False)]
 
                 self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')
