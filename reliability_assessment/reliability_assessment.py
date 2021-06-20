@@ -375,6 +375,7 @@ class ReliabilityAssessment:
         self.ticker = ticker
         self.nv_instance = NeuralVerifier()
         self.db_instance = MongoDB()
+        self.tg_instance = TweetGeneration()
         self.default_logger = logger.get_logger('reliability_assessment')
         self.config = configparser.ConfigParser()
         self.config.read('./config.ini')
@@ -530,6 +531,16 @@ class ReliabilityAssessment:
     def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
         print("Let's train the GPT-2 for Tweets! ")
 
+    def generator_wrapper(self, model_type, model_name_or_path, tweet):
+        tweet_length = len(tweet['text'].split())
+        fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
+                       for individual_fake_tweet in
+                       self.tg_instance.tweet_generation(model_type=model_type,
+                                                         model_name_or_path=model_name_or_path,
+                                                         prompt=tweet['text'].split()[
+                                                                :randint(2, int(tweet_length / 3))],
+                                                         temperature=1, num_return_sequences=2, no_cuda=False)]
+
     def neural_fake_news_generation(self, model_type, model_name_or_path):
         """
         For each authentic tweet, generate a fake one based on a prompt (extracted from Top-..random substring in original tweet)
@@ -538,7 +549,6 @@ class ReliabilityAssessment:
         """
         self.db_instance.drop_collection(self.input_date, self.ticker, database='fake')
 
-        tg_instance = TweetGeneration()
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker,
                                                             ra_raw=False, feature_filter=True)
 
@@ -549,14 +559,9 @@ class ReliabilityAssessment:
                                                                                 self.input_date,
                                                                                 self.ticker, database='fake')]
 
-            for tweet in tweets_collection_small:
-                tweet_length = len(tweet['text'].split())
-                fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
-                               for individual_fake_tweet in
-                               tg_instance.tweet_generation(model_type=model_type,
-                                                            model_name_or_path=model_name_or_path,
-                                                            prompt=tweet['text'].split()[
-                                                                   :randint(2, int(tweet_length / 3))],
-                                                            temperature=1, num_return_sequences=2, no_cuda=False)]
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                tweet_futures = [executor.submit(self.generator_wrapper, model_type, model_name_or_path, tweet) for
+                                 tweet in tweets_collection_small]
 
-                self.db_instance.insert_many(self.input_date, self.ticker, fake_tweets, database='fake')
+            for future_result in tweet_futures:
+                self.db_instance.insert_many(self.input_date, self.ticker, future_result.result(), database='fake')
