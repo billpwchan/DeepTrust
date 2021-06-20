@@ -51,6 +51,44 @@ class TweetGeneration:
         "xlm":        (XLMWithLMHeadModel, XLMTokenizer),
     }
 
+    def __init__(self):
+        self.tokenizer = None
+        self.model = None
+        self.args = None
+
+    def set_model(self, model_type, model_name_or_path, no_cuda=False, fp16=False):
+        if model_type not in TweetGeneration.MODEL_CLASSES.keys():
+            raise RuntimeError(f'NEED TO BE ONE OF {TweetGeneration.MODEL_CLASSES.keys()}')
+
+        args = {
+            'model_type':         model_type,
+            'model_name_or_path': model_name_or_path,
+            'no_cuda':            no_cuda,
+            'fp16':               fp16
+        }
+        # Pass dot reference check!
+        args = dotdict(args)
+
+        args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+        args.n_gpu = 0 if args.no_cuda else torch.cuda.device_count()
+
+        TweetGeneration.default_logger.warning(
+            f"device: {args.device}, n_gpu: {args.n_gpu}, 16-bits training: {args.fp16}")
+
+        # TweetGeneration.set_seed(args)
+        # Initialize the model and tokenizer
+        try:
+            args.model_type = args.model_type.lower()
+            model_class, tokenizer_class = TweetGeneration.MODEL_CLASSES[args.model_type]
+        except KeyError:
+            raise KeyError("the model {} you specified is not supported. You are welcome to add it and open a PR :)")
+
+        self.tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
+        self.model = model_class.from_pretrained(args.model_name_or_path)
+        self.model.to(args.device)
+
+        self.args = args
+
     @staticmethod
     def set_seed(args):
         np.random.seed(args.seed)
@@ -97,8 +135,7 @@ class TweetGeneration:
             length = TweetGeneration.MAX_LENGTH  # avoid infinite loop
         return length
 
-    @staticmethod
-    def tweet_generation(model_type, model_name_or_path, prompt="", length=50, stop_token=None, temperature=1.0,
+    def tweet_generation(self, model_type, model_name_or_path, prompt="", length=50, stop_token=None, temperature=1.0,
                          repetition_penalty=1.0, k=0, p=0.9, prefix="", xlm_language="", seed=42, no_cuda=False,
                          num_return_sequences=10, fp16=False) -> list:
         """
@@ -142,52 +179,38 @@ class TweetGeneration:
             'fp16':                 fp16
         }
         # Pass dot reference check!
-        args = dotdict(args)
 
-        args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-        args.n_gpu = 0 if args.no_cuda else torch.cuda.device_count()
+        for key, value in args:
+            self.args[key] = value
 
-        TweetGeneration.default_logger.warning(
-            f"device: {args.device}, n_gpu: {args.n_gpu}, 16-bits training: {args.fp16}")
-
-        # TweetGeneration.set_seed(args)
-        # Initialize the model and tokenizer
-        try:
-            args.model_type = args.model_type.lower()
-            model_class, tokenizer_class = TweetGeneration.MODEL_CLASSES[args.model_type]
-        except KeyError:
-            raise KeyError("the model {} you specified is not supported. You are welcome to add it and open a PR :)")
-
-        tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
-        model = model_class.from_pretrained(args.model_name_or_path)
-        model.to(args.device)
+        args = dotdict(self.args)
 
         if args.fp16:
-            model.half()
+            self.model.half()
 
         args.length = TweetGeneration.adjust_length_to_model(args.length,
-                                                             max_sequence_length=model.config.max_position_embeddings)
+                                                             max_sequence_length=self.model.config.max_position_embeddings)
         TweetGeneration.default_logger.info(args)
 
-        prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
+        prompt_text = args.prompt if args.prompt else " "
 
         # Different models need different input formatting and/or extra arguments
         requires_preprocessing = args.model_type in TweetGeneration.PREPROCESSING_FUNCTIONS.keys()
         if requires_preprocessing:
             prepare_input = TweetGeneration.PREPROCESSING_FUNCTIONS.get(args.model_type)
-            preprocessed_prompt_text = TweetGeneration.prepare_xlm_input(args, model, tokenizer, prompt_text)
+            preprocessed_prompt_text = TweetGeneration.prepare_xlm_input(args, self.model, self.tokenizer, prompt_text)
 
-            if model.__class__.__name__ in ["TransfoXLLMHeadModel"]:
+            if self.model.__class__.__name__ in ["TransfoXLLMHeadModel"]:
                 tokenizer_kwargs = {"add_space_before_punct_symbol": True}
             else:
                 tokenizer_kwargs = {}
 
-            encoded_prompt = tokenizer.encode(
+            encoded_prompt = self.tokenizer.encode(
                 preprocessed_prompt_text, add_special_tokens=False, return_tensors="pt", **tokenizer_kwargs
             )
         else:
             prefix = args.prefix
-            encoded_prompt = tokenizer.encode(prefix + prompt_text, add_special_tokens=False, return_tensors="pt")
+            encoded_prompt = self.tokenizer.encode(prefix + prompt_text, add_special_tokens=False, return_tensors="pt")
         encoded_prompt = encoded_prompt.to(args.device)
 
         if encoded_prompt.size()[-1] == 0:
@@ -195,7 +218,7 @@ class TweetGeneration:
         else:
             input_ids = encoded_prompt
 
-        output_sequences = model.generate(
+        output_sequences = self.model.generate(
             input_ids=input_ids,
             max_length=args.length + len(encoded_prompt[0]),
             temperature=args.temperature,
@@ -216,14 +239,15 @@ class TweetGeneration:
             generated_sequence = generated_sequence.tolist()
 
             # Decode text
-            text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+            text = self.tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
 
             # Remove all text after the stop token
             text = text[: text.find(args.stop_token) if args.stop_token else None]
 
             # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
             total_sequence = (
-                    prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)):]
+                    prompt_text + text[
+                                  len(self.tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)):]
             )
 
             generated_sequences.append(total_sequence)
@@ -551,6 +575,8 @@ class ReliabilityAssessment:
 
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker,
                                                             ra_raw=False, feature_filter=True)
+
+        self.tg_instance.set_model(model_type, model_name_or_path)
 
         SLICES = 3
         for i in trange(0, len(tweets_collection), SLICES):
