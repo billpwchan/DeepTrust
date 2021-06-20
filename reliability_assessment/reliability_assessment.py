@@ -179,10 +179,6 @@ class TweetGeneration:
             'fp16':                 fp16
         }
         # Pass dot reference check!
-
-        for key, value in args:
-            self.args[key] = value
-
         args = dotdict(self.args)
 
         if args.fp16:
@@ -555,15 +551,15 @@ class ReliabilityAssessment:
     def neural_fake_news_generator_fine_tune(self, model_type, model_name_or_path):
         print("Let's train the GPT-2 for Tweets! ")
 
-    def generator_wrapper(self, model_type, model_name_or_path, tweet):
+    def generator_wrapper(self, model_type, model_name_or_path, tweet) -> list:
         tweet_length = len(tweet['text'].split())
-        fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
-                       for individual_fake_tweet in
-                       self.tg_instance.tweet_generation(model_type=model_type,
-                                                         model_name_or_path=model_name_or_path,
-                                                         prompt=" ".join(
-                                                             tweet['text'].split()[:randint(2, int(tweet_length / 3))]),
-                                                         temperature=1, num_return_sequences=2, no_cuda=False)]
+        return [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
+                for individual_fake_tweet in
+                self.tg_instance.tweet_generation(model_type=model_type,
+                                                  model_name_or_path=model_name_or_path,
+                                                  prompt=" ".join(
+                                                      tweet['text'].split()[:randint(2, int(tweet_length / 3))]),
+                                                  temperature=1, num_return_sequences=2, no_cuda=False)]
 
     def neural_fake_news_generation(self, model_type, model_name_or_path):
         """
