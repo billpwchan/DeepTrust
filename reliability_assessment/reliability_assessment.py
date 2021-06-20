@@ -539,15 +539,15 @@ class ReliabilityAssessment:
              "--per_gpu_train_batch_size", "1", "--per_gpu_eval_batch_size", "1", "--learning_rate", "5e-5",
              "--save_steps", "50000", "--logging_steps", "50", "--num_train_epochs", "1"])
 
-    def generator_wrapper(self, model_type, model_name_or_path, tweet):
+    def generator_wrapper(self, model_type, model_name_or_path, tweet) -> list:
         tweet_length = len(tweet['text'].split())
-        fake_tweets = [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
-                       for individual_fake_tweet in
-                       self.tg_instance.tweet_generation(model_type=model_type,
-                                                         model_name_or_path=model_name_or_path,
-                                                         prompt=" ".join(tweet['text'].split()[
-                                                                         :randint(2, int(tweet_length / 3))]),
-                                                         temperature=1, num_return_sequences=2, no_cuda=False)]
+        return [{'text': individual_fake_tweet, 'original_id': tweet['id'], 'model': model_name_or_path}
+                for individual_fake_tweet in
+                self.tg_instance.tweet_generation(model_type=model_type,
+                                                  model_name_or_path=model_name_or_path,
+                                                  prompt=" ".join(tweet['text'].split()[
+                                                                  :randint(2, int(tweet_length / 3))]),
+                                                  temperature=1, num_return_sequences=2, no_cuda=False)]
 
     def neural_fake_news_generation(self, model_type, model_name_or_path):
         """
