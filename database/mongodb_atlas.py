@@ -72,17 +72,6 @@ class MongoDB:
         return [record for record in
                 self.db[collection_name].find(query_field, unselect_filed)]
 
-    def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet'):
-        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        self.default_logger.info(f'Retrieve RoBERTa-detector records from database {collection_name}')
-        query = {"ra_raw.RoBERTa-detector.real_probability": {"$gte": threshold}}
-        return [record for record in self.db[collection_name].find(query, {'ra_raw': 0})]
-
-    def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
-        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        self.default_logger.info(f'Retrieve records from database {collection_name}')
-        return [record for record in self.db[collection_name].find({})]
-
     def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
                                       select_field=None, feature_filter: bool = True):
         if select_field is None:
@@ -98,6 +87,17 @@ class MongoDB:
             {field: {'$exists': False}}
         ]}
         return [record for record in self.db[collection_name].find(query_field, select_field)]
+
+    def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.default_logger.info(f'Retrieve RoBERTa-detector records from database {collection_name}')
+        query = {"ra_raw.RoBERTa-detector.real_probability": {"$gte": threshold}}
+        return [record for record in self.db[collection_name].find(query, {'ra_raw': 0})]
+
+    def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
+        collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
+        self.default_logger.info(f'Retrieve records from database {collection_name}')
+        return [record for record in self.db[collection_name].find({})]
 
     def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
