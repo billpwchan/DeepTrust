@@ -11,10 +11,14 @@ import time
 from datetime import date
 from random import randint
 
+import joblib
 import numpy as np
 import requests
 import torch
 from profanity_check import predict_prob
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.svm import SVC
 from tqdm import trange
 from transformers import (
     GPT2LMHeadModel,
@@ -618,6 +622,13 @@ class ReliabilityAssessment:
                                          [fake for future_result in tweet_futures for fake in
                                           future_result.result()], database='fake')
 
+    @staticmethod
+    def __frac_hist_handle(tweets_collection: list) -> list:
+        output_list = []
+        for entry in tweets_collection:
+            output_list.append([value / sum(entry) for value in entry])
+        return output_list
+
     def neural_fake_news_train_classifier(self, gltr_gpt2: bool, gltr_bert: bool):
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
@@ -626,8 +637,37 @@ class ReliabilityAssessment:
         human_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
                                    self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                                    gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
-                                   if tweet['ra_raw'][f'{gltr_type}-detector']]
-        machine_tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='fake',
-                                                                    gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+                                   if f'{gltr_type}-detector' in tweet['ra_raw'] and
+                                   tweet['ra_raw'][f'{gltr_type}-detector']]
+        machine_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
+                                     self.db_instance.get_all_tweets(self.input_date, self.ticker, database='fake',
+                                                                     gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1},
+                                                                     feature_filter=False)
+                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and
+                                     tweet['ra_raw'][f'{gltr_type}-detector']]
         self.default_logger.info(f'Human-Written Tweets Training Samples: {len(human_tweets_collection)}')
         self.default_logger.info(f'Machine-Written Tweets Training Samples: {len(machine_tweets_collection)}')
+
+        human_tweets_collection = self.__frac_hist_handle(human_tweets_collection)
+        machine_tweets_collection = self.__frac_hist_handle(machine_tweets_collection)
+
+        X = human_tweets_collection + machine_tweets_collection
+        y = ['Human' for _ in range(len(human_tweets_collection))] + \
+            ['Machine' for _ in range(len(machine_tweets_collection))]
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+        tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
+                             'C':      [1, 10, 100, 1000]},
+                            {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+
+        scores = ['accuracy']
+        clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=5)
+        clf.fit(X_train, y_train)
+
+        self.default_logger.info(clf.best_params_)
+
+        joblib.dump(clf, 'svm.pkl')
+
+        y_true, y_pred = y_test, clf.predict(X_test)
+        print(classification_report(y_true, y_pred))
