@@ -521,7 +521,7 @@ class ReliabilityAssessment:
             [p.kill() for p in SUB_PROCESSES]
 
         if gltr_gpt2 or gltr_bert:
-            gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][2]
+            gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
             self.nv_instance.init_gltr_models(model=gltr_type)
             SLICES = 4
             if fake:
