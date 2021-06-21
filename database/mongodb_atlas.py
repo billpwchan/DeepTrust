@@ -63,9 +63,10 @@ class MongoDB:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
         feature_field = {"$and": [
+            {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]},
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True}]
-        } if feature_filter else {}
+        } if feature_filter else {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]}
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
         return [record for record in
                 self.db[collection_name].find(feature_field, unselect_filed)]
@@ -87,10 +88,14 @@ class MongoDB:
             select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         query_field = {"$and": [
+            {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]},
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True},
             {field: {'$exists': False}},
-        ]} if feature_filter else {field: {'$exists': False}}
+        ]} if feature_filter else {"$and": [
+            {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]},
+            {field: {'$exists': False}}
+        ]}
         return [record for record in self.db[collection_name].find(query_field, select_field)]
 
     def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
@@ -121,7 +126,8 @@ class MongoDB:
         assert len(ref_list) == len(entry_list)
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         operations = [
-            UpdateOne({ref_field: ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in zip(ref_list, entry_list)
+            UpdateOne({ref_field: ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in
+            zip(ref_list, entry_list)
         ]
         result = self.db[collection_name].bulk_write(operations)
         self.default_logger.info(f'Update {result.matched_count} records in {collection_name}')

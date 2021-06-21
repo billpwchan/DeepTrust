@@ -334,8 +334,9 @@ class InformationRetrieval:
         tweet_fields = 'possibly_sensitive'
         tweet_ids = [tweet['id'] for tweet in
                      self.db_instance.get_all_tweets(self.input_date, self.ticker, feature_filter=False)]
+        self.default_logger.info(f'Remaining Tweet IDs to Update: {len(tweet_ids)}')
 
-        SLICES = 100
+        SLICES = 90
         for i in trange(0, len(tweet_ids), SLICES):
             ids_collection_small = tweet_ids[i:i + SLICES]
             ids = ",".join([tweet_id for tweet_id in ids_collection_small])
