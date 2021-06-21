@@ -13,9 +13,11 @@ from random import randint
 
 import joblib
 import numpy as np
+import pandas as pd
 import requests
 import torch
 from profanity_check import predict_prob
+from sklearn import preprocessing
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.svm import SVC
@@ -655,18 +657,24 @@ class ReliabilityAssessment:
         y = ['Human' for _ in range(len(human_tweets_collection))] + \
             ['Machine' for _ in range(len(machine_tweets_collection))]
 
+        df = pd.DataFrame(X)
+        df['y'] = y
+        df.to_csv(f'./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_classifier.csv')
+
+        le = preprocessing.LabelEncoder()
+        le.fit(y)
+        y = le.transform(y)
+
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
         tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
                              'C':      [1, 10, 100, 1000]},
                             {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
 
-        scores = ['accuracy']
-        clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=5)
+        clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=10)
         clf.fit(X_train, y_train)
 
         self.default_logger.info(clf.best_params_)
-
         joblib.dump(clf, 'svm.pkl')
 
         y_true, y_pred = y_test, clf.predict(X_test)
