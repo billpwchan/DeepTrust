@@ -32,7 +32,7 @@ gc.enable()
 SUB_PROCESSES = []
 
 DETECTOR_MAP = {
-    'detectors':            ('gpt-2'),
+    'detectors':            'gpt-2',
     'gpt-detector':         'detector-large.pt',
     'gltr-detector':        ('gpt2-xl', 'BERT'),
     'gpt-detector-server':  'http://localhost:8080/',
@@ -274,22 +274,24 @@ class NeuralVerifier:
             except requests.exceptions.ConnectionError:
                 continue
 
-    def init_gltr_models(self, models: tuple = DETECTOR_MAP['gltr-detector']):
-        default_port = 5001
-        for model in models:
-            self.default_logger.info(f"Initialize GLTR {model}")
-            gltr_gpt_server = subprocess.Popen(
-                ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
-                 f"{default_port}"])
-            SUB_PROCESSES.append(gltr_gpt_server)
-            while True:
-                try:
-                    if requests.get(f'http://localhost:{default_port}/').status_code is not None:
-                        self.default_logger.info(f"GLTR {model} Initialized")
-                        default_port += 1
-                        break
-                except requests.exceptions.ConnectionError:
-                    continue
+    def init_gltr_models(self, model: str = DETECTOR_MAP['gltr-detector'][0]):
+        if model not in DETECTOR_MAP['gltr-detector']:
+            raise RuntimeError
+
+        default_port = DETECTOR_MAP['gltr-detector-server'][DETECTOR_MAP['gltr-detector'].index(model)][-5:-1]
+        self.default_logger.info(f"Initialize GLTR {model}")
+        gltr_gpt_server = subprocess.Popen(
+            ["python", "./reliability_assessment/gltr/server.py", "--model", f"{model}", "--port",
+             f"{default_port}"])
+        SUB_PROCESSES.append(gltr_gpt_server)
+        while True:
+            try:
+                if requests.get(f'http://localhost:{default_port}/').status_code is not None:
+                    self.default_logger.info(f"GLTR {model} Initialized")
+                    default_port += 1
+                    break
+            except requests.exceptions.ConnectionError:
+                continue
 
     def __download_models(self, mode: str = 'gpt-2'):
         if mode == 'gpt-2':
@@ -330,7 +332,7 @@ class NeuralVerifier:
                 else:
                     self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
 
-    def detect(self, text, mode: str = 'gpt-2') -> dict or list:
+    def detect(self, text, mode: str = DETECTOR_MAP['gpt-detector']) -> dict or list:
         """
         Output Format for GPT-2: {'all_tokens', 'used_tokens', 'real_probability', 'fake_probability'}
         Output Format for GLTR: {'bpe_strings', 'pred_topk', 'real_topk', 'frac_hist'}
@@ -339,7 +341,7 @@ class NeuralVerifier:
         :param mode: 'gpt-2' or 'gltr' currently supported
         :return:
         """
-        if mode == 'gpt-2':
+        if mode == DETECTOR_MAP['gpt-detector']:
             # Payload text should not have # symbols or it will ignore following text - less tokens
             url = f"{DETECTOR_MAP['gpt-detector-server']}?={text.replace('#', '')}"
             payload = {}
@@ -355,38 +357,37 @@ class NeuralVerifier:
             # self.default_logger.info(f'{mode}: {response.text}')
             # Return a dict representation of the returned text
             return ast.literal_eval(response.text) if response is not None else {}
-        elif mode == 'gltr':
-            output_data = []
-            for gltr_type, gltr_server in zip(DETECTOR_MAP['gltr-detector'], DETECTOR_MAP['gltr-detector-server']):
-                url = f"{gltr_server}api/analyze"
-                payload = json.dumps({
-                    "project": f"{gltr_type}",
-                    "text":    text
-                })
-                headers = {
-                    'Content-Type': 'application/json'
-                }
-                response = None
-                for retry_limit in range(5):
-                    try:
-                        response = requests.request("POST", url, headers=headers, data=payload)
-                        break
-                    except requests.exceptions.ConnectionError:
-                        time.sleep(1)
-                        continue
+        elif mode in DETECTOR_MAP['gltr-detector']:
+            gltr_type = mode
+            gltr_server = DETECTOR_MAP['gltr-detector-server'][DETECTOR_MAP['gltr-detector'].index(gltr_type)]
+            url = f"{gltr_server}api/analyze"
+            payload = json.dumps({
+                "project": f"{gltr_type}",
+                "text":    text
+            })
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            response = None
+            for retry_limit in range(5):
+                try:
+                    response = requests.request("POST", url, headers=headers, data=payload)
+                    break
+                except requests.exceptions.ConnectionError:
+                    time.sleep(1)
+                    continue
 
-                if response is not None and response.ok:
-                    gltr_result = json.loads(response.text)['result']
-                    # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
-                    frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
-                                         for index, real_topk in enumerate(gltr_result['real_topk'])]
-                    frac_histogram = np.histogram(frac_distribution, bins=10, range=(0.0, 1.0), density=False)
-                    gltr_result['frac_hist'] = frac_histogram[0].tolist()
-                    # self.default_logger.info(f'{gltr_type}: {frac_perc_distribution}')
-                    output_data.append(gltr_result)
-                else:
-                    self.default_logger.error(f'GLTR Exception: {payload}')
-                    output_data.append({})
+            if response is not None and response.ok:
+                gltr_result = json.loads(response.text)['result']
+                # GLTR['result'].keys() = 'bpe_strings', 'pred_topk', 'real_topk'
+                frac_distribution = [float(real_topk[1]) / float(gltr_result['pred_topk'][index][0][1])
+                                     for index, real_topk in enumerate(gltr_result['real_topk'])]
+                frac_histogram = np.histogram(frac_distribution, bins=10, range=(0.0, 1.0), density=False)
+                gltr_result['frac_hist'] = frac_histogram[0].tolist()
+                output_data = gltr_result
+            else:
+                self.default_logger.error(f'GLTR Exception: {payload}')
+                output_data = {}
             return output_data
         else:
             raise NotImplementedError
@@ -483,7 +484,7 @@ class ReliabilityAssessment:
         tweet_text = self.__tweet_preprocess(tweet['text'])
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
 
-    def neural_fake_news_detection(self, gpt_2: bool, gltr: bool):
+    def neural_fake_news_detection(self, gpt_2: bool, gltr_gpt2: bool, gltr_bert: bool, fake: bool = False):
         # Always clean up fields before starting!
         # if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
         #     self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
@@ -491,49 +492,64 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 30  # Good for 1080 Ti
-            gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
-                                                                            self.input_date, self.ticker)
+            SLICES = 5  # Good for 1080 Ti
+            if fake:
+                gpt_collection = \
+                    self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
+                                                                   self.input_date, self.ticker,
+                                                                   database='fake',
+                                                                   select_field={"_id": 1, "id": 1, "text": 1},
+                                                                   feature_filter=False)
+            else:
+                gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
+                                                                                self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
             for i in trange(0, len(gpt_collection), SLICES):
                 tweets_collection_small = gpt_collection[i:i + SLICES]
                 # Update RoBERTa-detector Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, 'gpt-2') for tweet in
+                    gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, DETECTOR_MAP['gpt-detector']) for
+                                     tweet in
                                      tweets_collection_small]
 
                 # Update MongoDB
                 self.db_instance.update_one_bulk([future.result()['_id'] for future in gpt_2_futures],
                                                  'ra_raw.RoBERTa-detector',
                                                  [future.result()['output'] for future in gpt_2_futures],
-                                                 self.input_date, self.ticker)
+                                                 self.input_date, self.ticker, database='fake' if fake else 'tweet')
                 gc.collect()
             # Kill GPT-2 Process
             [p.kill() for p in SUB_PROCESSES]
 
-        if gltr:
-            self.nv_instance.init_gltr_models(models=DETECTOR_MAP['gltr-detector'])
+        if gltr_gpt2 or gltr_bert:
+            gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][2]
+            self.nv_instance.init_gltr_models(model=gltr_type)
             SLICES = 2
-            gltr_collection = self.db_instance.get_neural_non_updated_tweets(
-                f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector", self.input_date, self.ticker)
+            if fake:
+                gltr_collection = self.db_instance.get_neural_non_updated_tweets(
+                    f"ra_raw.{gltr_type}-detector",
+                    self.input_date, self.ticker,
+                    database='fake',
+                    select_field={"_id": 1, "id": 1, "text": 1},
+                    feature_filter=False)
+            else:
+                gltr_collection = self.db_instance.get_neural_non_updated_tweets(
+                    f"ra_raw.{gltr_type}-detector", self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
 
             for i in trange(0, len(gltr_collection), SLICES):
                 tweets_collection_small = gltr_collection[i:i + SLICES]
                 # Update GLTR Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    gltr_futures = [executor.submit(self.detector_wrapper, tweet, 'gltr') for tweet in
-                                    tweets_collection_small]
+                    gltr_futures = [executor.submit(self.detector_wrapper, tweet, gltr_type)
+                                    for tweet in tweets_collection_small]
 
                 self.db_instance.update_one_bulk([future.result()['_id'] for future in gltr_futures],
-                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][0]}-detector",
-                                                 [future.result()['output'][0] for future in gltr_futures],
-                                                 self.input_date, self.ticker)
-                self.db_instance.update_one_bulk([future.result()['_id'] for future in gltr_futures],
-                                                 f"ra_raw.{DETECTOR_MAP['gltr-detector'][1]}-detector",
-                                                 [future.result()['output'][1] for future in gltr_futures],
-                                                 self.input_date, self.ticker)
+                                                 f"ra_raw.{gltr_type}-detector",
+                                                 [future.result()['output'] for future in gltr_futures],
+                                                 self.input_date, self.ticker, database='fake' if fake else 'tweet')
+
                 gc.collect()
             [p.kill() for p in SUB_PROCESSES]
 

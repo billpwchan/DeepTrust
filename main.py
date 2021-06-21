@@ -24,9 +24,10 @@ def main():
 
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
-                        choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-verify'])
+                        choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-update-fake',
+                                 'neural-verify'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
-                        choices=['gpt-2', 'gltr'])
+                        choices=['gpt-2', 'gltr-gpt2', 'gltr-bert'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -57,11 +58,19 @@ def main():
         if 'feature-filter' in args.ra_tasks:
             ra_instance.feature_filter()
         if 'neural-generate' in args.ra_tasks:
-            # ra_instance.neural_fake_news_dataset_handle()
-            # ra_instance.neural_fake_news_generator_fine_tune(model_type='gpt2', model_name_or_path='gpt2-medium')
-            ra_instance.neural_fake_news_generation(model_type='gpt2', model_name_or_path='./reliability_assessment/gpt_generator/')
+            ra_instance.neural_fake_news_dataset_handle()
+            ra_instance.neural_fake_news_generator_fine_tune(model_type='gpt2', model_name_or_path='gpt2-medium')
+            ra_instance.neural_fake_news_generation(model_type='gpt2',
+                                                    model_name_or_path='./reliability_assessment/gpt_generator/')
         if 'neural-update' in args.ra_tasks:
-            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models), gltr=('gltr' in args.models))
+            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models),
+                                                   gltr_gpt2=('gltr-gpt2' in args.models),
+                                                   gltr_bert=('gltr-bert' in args.models))
+        if 'neural-update-fake' in args.ra_tasks:
+            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models),
+                                                   gltr_gpt2=('gltr-gpt2' in args.models),
+                                                   gltr_bert=('gltr-bert' in args.models),
+                                                   fake=True)
 
 
 if __name__ == '__main__':

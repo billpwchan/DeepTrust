@@ -82,15 +82,16 @@ class MongoDB:
         return [record for record in self.db[collection_name].find({})]
 
     def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
-                                      select_field=None):
+                                      select_field=None, feature_filter: bool = True):
         if select_field is None:
             select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        return [record for record in self.db[collection_name].find({"$and": [
+        query_field = {"$and": [
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True},
             {field: {'$exists': False}},
-        ]}, select_field)]
+        ]} if feature_filter else {field: {'$exists': False}}
+        return [record for record in self.db[collection_name].find(query_field, select_field)]
 
     def count_documents(self, input_date: date, ticker: str, database: str = 'tweet') -> int:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
