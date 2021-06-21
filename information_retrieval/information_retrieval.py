@@ -63,7 +63,7 @@ class TwitterAPIInterface:
         query_params = {
             'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS} {INDIVIDUAL_TWEET}',
             'expansions':   'author_id',
-            'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,referenced_tweets,source,text',
+            'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
             'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(
                 pytz.utc).isoformat(),
@@ -77,7 +77,7 @@ class TwitterAPIInterface:
 
         return query_params
 
-    def tw_search(self, query_params) -> json:
+    def tw_search(self, query_params: dict) -> json:
         """
         Return JSON object with fields 'data', 'includes', 'meta' \n
         Data.Fields = ['source', 'id', 'entities', 'text', 'reply_settings', 'context_annotations', 'public_metrics', 'conversation_id', 'referenced_tweets', 'author_id', 'possibly_sensitive', 'created_at', 'lang'] \n
@@ -97,6 +97,22 @@ class TwitterAPIInterface:
                 time.sleep(120)
         self.default_logger.error("Twitter Service Unavailable")
 
+    def tw_lookup(self, ids: str, tweet_fields: str) -> json:
+        query_params = {
+            "ids":          ids,
+            "tweet.fields": tweet_fields
+        }
+        for retry_limit in range(50):
+            search_url = f"https://api.twitter.com/2/tweets"
+            response = requests.request("GET", search_url, headers=self.auth_header, params=query_params)
+            if response.status_code == 200:
+                time.sleep(4)
+                return response.json()
+            else:
+                self.default_logger.warn(f'{response.status_code}, {response.text}. Retrying...')
+                time.sleep(120)
+        self.default_logger.error("Twitter Service Unavailable")
+
 
 class EikonAPIInterface:
     def __init__(self, ek_api_key, open_permid):
@@ -106,7 +122,6 @@ class EikonAPIInterface:
 
     @staticmethod
     def get_ric_symbology(ticker: str) -> str:
-        print(ek.get_symbology(ticker, from_symbol_type='ticker'))
         cusip = ek.get_symbology(ticker, from_symbol_type='ticker', to_symbol_type='CUSIP').loc[ticker, 'CUSIP']
         ric = ek.get_symbology(cusip, from_symbol_type='CUSIP', to_symbol_type='RIC').loc[cusip, 'RIC']
         return ric
@@ -314,3 +329,18 @@ class InformationRetrieval:
                 break
             self.default_logger.info(
                 f"Oldest ID: {tw_response['meta']['oldest_id']} Newest ID: {tw_response['meta']['newest_id']}")
+
+    def update_tweets(self):
+        tweet_fields = 'possibly_sensitive'
+        tweet_ids = [tweet['id'] for tweet in
+                     self.db_instance.get_all_tweets(self.input_date, self.ticker, feature_filter=False)]
+
+        SLICES = 100
+        for i in trange(0, len(tweet_ids), SLICES):
+            ids_collection_small = tweet_ids[i:i + SLICES]
+            ids = ",".join([tweet_id for tweet_id in ids_collection_small])
+            tw_response = self.tw_instance.tw_lookup(ids, tweet_fields)
+
+            self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], tweet_fields,
+                                             [tweet[tweet_fields] for tweet in tw_response['data']],
+                                             self.input_date, self.ticker, ref_field='id')

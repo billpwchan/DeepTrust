@@ -21,6 +21,8 @@ def main():
     # Information Retrieval Arguments
     parser.add_argument('-ad', "--anomaly_date", help="Specify the anomaly date",
                         type=lambda d: datetime.strptime(d, '%d/%m/%Y').date())
+    parser.add_argument('-irt', "--ir_tasks", nargs='+', help="Specify Information Retrieval tasks", type=str,
+                        choices=['tweet-search', 'tweet-update'])
 
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
@@ -51,7 +53,10 @@ def main():
 
     if args.module == 'IR':
         ir_instance = InformationRetrieval(input_date=args.anomaly_date, ticker=args.ticker)
-        ir_instance.retrieve_tweets()
+        if 'tweet-search' in args.ir_tasks:
+            ir_instance.retrieve_tweets()
+        if 'tweet-update' in args.ir_tasks:
+            ir_instance.update_tweets()
 
     if args.module == 'RA':
         ra_instance = ReliabilityAssessment(input_date=args.anomaly_date, ticker=args.ticker)

@@ -117,11 +117,11 @@ class MongoDB:
         self.default_logger.info(f'Update {result.modified_count} records in {collection_name}')
 
     def update_one_bulk(self, ref_list: list, field, entry_list: list, input_date: date, ticker: str,
-                        database: str = 'tweet'):
+                        ref_field: str = '_id', database: str = 'tweet'):
         assert len(ref_list) == len(entry_list)
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         operations = [
-            UpdateOne({'_id': ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in zip(ref_list, entry_list)
+            UpdateOne({ref_field: ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in zip(ref_list, entry_list)
         ]
         result = self.db[collection_name].bulk_write(operations)
         self.default_logger.info(f'Update {result.matched_count} records in {collection_name}')
