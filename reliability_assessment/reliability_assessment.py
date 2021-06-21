@@ -616,3 +616,15 @@ class ReliabilityAssessment:
             self.db_instance.insert_many(self.input_date, self.ticker,
                                          [fake for future_result in tweet_futures for fake in
                                           future_result.result()], database='fake')
+
+    def neural_fake_news_train_classifier(self, gltr_gpt2: bool, gltr_bert: bool):
+        if gltr_gpt2 or gltr_bert:
+            gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
+        else:
+            return
+        human_tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                                  gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+        machine_tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='fake',
+                                                                    gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+        self.default_logger.info(f'Human-Written Tweets Training Samples: {len(human_tweets_collection)}')
+        self.default_logger.info(f'Machine-Written Tweets Training Samples: {len(machine_tweets_collection)}')
