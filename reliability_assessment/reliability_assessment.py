@@ -411,7 +411,7 @@ class ReliabilityAssessment:
 
     @staticmethod
     def __remove_twitter_link(text) -> str:
-        return re.sub(r'https://t.co/.*$', '', text)
+        return re.sub(r'https://t.co/[a-zA-Z0-9_.-]*$', '', text)
 
     def __tweet_feature_rules(self, tweet) -> bool:
         """
@@ -492,7 +492,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 5  # Good for 1080 Ti
+            SLICES = 10  # Good for 1080 Ti
             if fake:
                 gpt_collection = \
                     self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
@@ -510,8 +510,7 @@ class ReliabilityAssessment:
                 # Update RoBERTa-detector Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, DETECTOR_MAP['gpt-detector']) for
-                                     tweet in
-                                     tweets_collection_small]
+                                     tweet in tweets_collection_small]
 
                 # Update MongoDB
                 self.db_instance.update_one_bulk([future.result()['_id'] for future in gpt_2_futures],
