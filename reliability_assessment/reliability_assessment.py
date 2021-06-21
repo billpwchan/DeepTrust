@@ -288,7 +288,6 @@ class NeuralVerifier:
             try:
                 if requests.get(f'http://localhost:{default_port}/').status_code is not None:
                     self.default_logger.info(f"GLTR {model} Initialized")
-                    default_port += 1
                     break
             except requests.exceptions.ConnectionError:
                 continue
@@ -524,7 +523,7 @@ class ReliabilityAssessment:
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][2]
             self.nv_instance.init_gltr_models(model=gltr_type)
-            SLICES = 2
+            SLICES = 4
             if fake:
                 gltr_collection = self.db_instance.get_neural_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector",
