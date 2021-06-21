@@ -14,6 +14,7 @@ from random import randint
 import numpy as np
 import requests
 import torch
+from profanity_check import predict_prob
 from tqdm import trange
 from transformers import (
     GPT2LMHeadModel,
@@ -420,10 +421,11 @@ class ReliabilityAssessment:
         """
         # Need to have at least some interactions with the network
         public_metrics = tweet['public_metrics']
-        if public_metrics['retweet_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_retweet') or \
-                public_metrics['reply_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_reply') or \
-                public_metrics['like_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_like') or \
-                public_metrics['quote_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_quote'):
+        if (public_metrics['retweet_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_retweet') or
+            public_metrics['reply_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_reply') or
+            public_metrics['like_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_like') or
+            public_metrics['quote_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_quote')) and \
+                predict_prob([tweet['text']])[0] < self.config.getfloat('RA.Feature.Config', 'max_profanity_prob'):
             return True
         return False
 
@@ -464,7 +466,7 @@ class ReliabilityAssessment:
 
         # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False)
+                                                            ra_raw=False, feature_filter=False, sensitive_filter=False)
         authors_collection = self.db_instance.get_all_authors(self.input_date, self.ticker, database='author')
 
         # Initialize Feature Records
@@ -477,7 +479,7 @@ class ReliabilityAssessment:
                                 self.__tweet_feature_rules(tweet) and tweet['author_id'] in authors_id]
 
         self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection], 'ra_raw.feature-filter',
-                                         [True for i in range(len(tweets_collection))], self.input_date, self.ticker)
+                                         [True for _ in range(len(tweets_collection))], self.input_date, self.ticker)
 
     def detector_wrapper(self, tweet, mode):
         tweet_text = self.__tweet_preprocess(tweet['text'])

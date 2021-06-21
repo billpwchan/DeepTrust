@@ -59,17 +59,18 @@ class MongoDB:
             self.db[collection_name].drop()
 
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
-                       feature_filter: bool = True) -> list:
+                       feature_filter: bool = True, sensitive_filter: bool = True) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
-        feature_field = {"$and": [
+        query_field = {"$and": [
             {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]},
             {'ra_raw.feature-filter': {'$exists': True}},
             {'ra_raw.feature-filter': True}]
-        } if feature_filter else {"$or": [{'possibly_sensitive': False}, {'possibly_sensitive': {'$exists': False}}]}
+        } if feature_filter else {"$or": [{'possibly_sensitive': False},
+                                          {'possibly_sensitive': {'$exists': False}}]} if sensitive_filter else {}
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
         return [record for record in
-                self.db[collection_name].find(feature_field, unselect_filed)]
+                self.db[collection_name].find(query_field, unselect_filed)]
 
     def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'

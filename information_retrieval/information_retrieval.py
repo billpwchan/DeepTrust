@@ -333,8 +333,11 @@ class InformationRetrieval:
     def update_tweets(self):
         tweet_fields = 'possibly_sensitive'
         tweet_ids = [tweet['id'] for tweet in
-                     self.db_instance.get_all_tweets(self.input_date, self.ticker, feature_filter=False)]
+                     self.db_instance.get_all_tweets(self.input_date, self.ticker,
+                                                     feature_filter=False, sensitive_filter=False)]
         self.default_logger.info(f'Remaining Tweet IDs to Update: {len(tweet_ids)}')
+
+        self.db_instance.update_all(tweet_fields, False, self.input_date, self.ticker)
 
         SLICES = 100
         for i in trange(0, len(tweet_ids), SLICES):
