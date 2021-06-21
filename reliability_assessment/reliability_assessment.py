@@ -415,7 +415,7 @@ class ReliabilityAssessment:
 
     def __tweet_feature_rules(self, tweet) -> bool:
         """
-        TRUE means it satisfy the condition specified in the config. Should not remove those that return True.
+        TRUE means it satisfy the condition specified in the config. Should preserve records that are TRUE
         :param tweet:
         :return: bool
         """
@@ -425,7 +425,8 @@ class ReliabilityAssessment:
             public_metrics['reply_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_reply') or
             public_metrics['like_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_like') or
             public_metrics['quote_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_quote')) and \
-                predict_prob([tweet['text']])[0] < self.config.getfloat('RA.Feature.Config', 'max_profanity_prob'):
+                predict_prob([tweet['text']])[0] < self.config.getfloat('RA.Feature.Config', 'max_profanity_prob') and \
+                (('possibly_sensitive' not in tweet) or (not tweet['possibly_sensitive'])):
             return True
         return False
 
@@ -466,7 +467,7 @@ class ReliabilityAssessment:
 
         # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False, sensitive_filter=False)
+                                                            ra_raw=False, feature_filter=False)
         authors_collection = self.db_instance.get_all_authors(self.input_date, self.ticker, database='author')
 
         # Initialize Feature Records
@@ -622,8 +623,10 @@ class ReliabilityAssessment:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
         else:
             return
-        human_tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                                  gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+        human_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
+                                   self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                                   gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+                                   if tweet['ra_raw'][f'{gltr_type}-detector']]
         machine_tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='fake',
                                                                     gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
         self.default_logger.info(f'Human-Written Tweets Training Samples: {len(human_tweets_collection)}')
