@@ -676,7 +676,10 @@ class ReliabilityAssessment:
         clf.fit(X_train, y_train)
 
         self.default_logger.info(clf.best_params_)
-        joblib.dump(clf, 'svm.pkl')
+        joblib.dump(clf, './reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}.pkl')
 
         y_true, y_pred = y_test, clf.predict(X_test)
         print(classification_report(y_true, y_pred))
+
+    def neural_fake_news_verify(self):
+        print("Let's Verify")

@@ -79,6 +79,9 @@ def main():
         if 'neural-train' in args.ra_tasks:
             ra_instance.neural_fake_news_train_classifier(gltr_gpt2=('gltr-gpt2' in args.models),
                                                           gltr_bert=('gltr-bert' in args.models))
+        if 'neural-verify' in args.ra_tasks:
+            ra_instance.neural_fake_news_verify()
+
 
 
 if __name__ == '__main__':
