@@ -492,7 +492,7 @@ class ReliabilityAssessment:
         tweet_text = self.__tweet_preprocess(tweet['text'])
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
 
-    def neural_fake_news_detection(self, gpt_2: bool, gltr_gpt2: bool, gltr_bert: bool, fake: bool = False):
+    def neural_fake_news_update(self, gpt_2: bool = False, gltr_gpt2: bool = False, gltr_bert: bool = False, fake: bool = False):
         # Always clean up fields before starting!
         # if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
         #     self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
@@ -631,7 +631,7 @@ class ReliabilityAssessment:
             output_list.append([value / sum(entry) for value in entry])
         return output_list
 
-    def neural_fake_news_train_classifier(self, gltr_gpt2: bool, gltr_bert: bool):
+    def neural_fake_news_train_classifier(self, gltr_gpt2: bool = False, gltr_bert: bool = False):
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
         else:

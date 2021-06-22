@@ -68,20 +68,27 @@ def main():
             ra_instance.neural_fake_news_generation(model_type='gpt2',
                                                     model_name_or_path='./reliability_assessment/gpt_generator/')
         if 'neural-update' in args.ra_tasks:
-            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models),
-                                                   gltr_gpt2=('gltr-gpt2' in args.models),
-                                                   gltr_bert=('gltr-bert' in args.models))
+            if 'gpt-2' in args.models:
+                ra_instance.neural_fake_news_update(gpt_2=('gpt-2' in args.models))
+            if 'gltr-gpt2' in args.models:
+                ra_instance.neural_fake_news_update(gltr_gpt2=('gltr-gpt2' in args.models))
+            if 'gltr-bert' in args.models:
+                ra_instance.neural_fake_news_update(gltr_bert=('gltr-bert' in args.models))
         if 'neural-update-fake' in args.ra_tasks:
-            ra_instance.neural_fake_news_detection(gpt_2=('gpt-2' in args.models),
-                                                   gltr_gpt2=('gltr-gpt2' in args.models),
-                                                   gltr_bert=('gltr-bert' in args.models),
-                                                   fake=True)
+            if 'gpt-2' in args.models:
+                ra_instance.neural_fake_news_update(gpt_2=('gpt-2' in args.models), fake=True)
+            if 'gltr-gpt2' in args.models:
+                ra_instance.neural_fake_news_update(gltr_gpt2=('gltr-gpt2' in args.models), fake=True)
+            if 'gltr-bert' in args.models:
+                ra_instance.neural_fake_news_update(gltr_bert=('gltr-bert' in args.models), fake=True)
         if 'neural-train' in args.ra_tasks:
-            ra_instance.neural_fake_news_train_classifier(gltr_gpt2=('gltr-gpt2' in args.models),
-                                                          gltr_bert=('gltr-bert' in args.models))
+            if 'gltr-gpt2' in args.models:
+                ra_instance.neural_fake_news_train_classifier(gltr_gpt2=('gltr-gpt2' in args.models))
+            if 'gltr-bert' in args.models:
+                ra_instance.neural_fake_news_train_classifier(gltr_bert=('gltr-bert' in args.models))
+            ra_instance.neural_fake_news_update()
         if 'neural-verify' in args.ra_tasks:
             ra_instance.neural_fake_news_verify()
-
 
 
 if __name__ == '__main__':
