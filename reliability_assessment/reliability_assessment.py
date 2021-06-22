@@ -637,8 +637,9 @@ class ReliabilityAssessment:
         else:
             return
         human_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
-                                   self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                                   gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+                                   self.db_instance.get_roberta_threshold_tweets(
+                                       self.config.getfloat('RA.Neural.Config', 'roberta_threshold'),
+                                       self.input_date, self.ticker, gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
                                    if f'{gltr_type}-detector' in tweet['ra_raw'] and
                                    tweet['ra_raw'][f'{gltr_type}-detector']]
         machine_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
@@ -659,7 +660,7 @@ class ReliabilityAssessment:
 
         df = pd.DataFrame(X)
         df['y'] = y
-        df.to_csv(f'./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_classifier.csv')
+        df.to_csv(f'./reliability_assessment/detector_dataset/{self.ticker}_{self.input_date}_{gltr_type}.csv')
 
         le = preprocessing.LabelEncoder()
         le.fit(y)

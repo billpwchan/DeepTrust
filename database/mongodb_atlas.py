@@ -85,11 +85,15 @@ class MongoDB:
         ]}
         return [record for record in self.db[collection_name].find(query_field, select_field)]
 
-    def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet'):
+    def get_roberta_threshold_tweets(self, threshold: float, input_date: date, ticker: str, database: str = 'tweet',
+                                     ra_raw: bool = False, gltr: dict = None):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve RoBERTa-detector records from database {collection_name}')
         query = {"ra_raw.RoBERTa-detector.real_probability": {"$gte": threshold}}
-        return [record for record in self.db[collection_name].find(query, {'ra_raw': 0})]
+        unselect_filed = {} if ra_raw else {'ra_raw': 0}
+        if gltr is not None:
+            unselect_filed = gltr
+        return [record for record in self.db[collection_name].find(query, unselect_filed)]
 
     def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
