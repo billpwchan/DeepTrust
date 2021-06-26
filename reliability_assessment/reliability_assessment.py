@@ -562,7 +562,21 @@ class ReliabilityAssessment:
             [p.kill() for p in SUB_PROCESSES]
 
         if classifier:
-            print("Yeah")
+            for gltr_type in DETECTOR_MAP['gltr-detector']:
+                file_path = f'./reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl'
+                file_path_check = Path(file_path)
+                if file_path_check.is_file():
+                    clf = joblib.load(file_path)
+                else:
+                    self.default_logger.error(f"Please train your SVM classifier first. Missing {file_path}")
+
+                # Get all tweets with feature-filter = True
+                tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
+                                     self.db_instance.get_all_tweets(self.input_date, self.ticker,
+                                                                     database='tweet',
+                                                                     gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and tweet['ra_raw'][
+                                         f'{gltr_type}-detector']]
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
@@ -635,7 +649,8 @@ class ReliabilityAssessment:
             output_list.append([value / sum(entry) for value in entry])
         return output_list
 
-    def neural_fake_news_train_classifier(self, gltr_gpt2: bool = False, gltr_bert: bool = False, grid_search: bool = False):
+    def neural_fake_news_train_classifier(self, gltr_gpt2: bool = False, gltr_bert: bool = False,
+                                          grid_search: bool = False):
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
         else:
@@ -668,6 +683,7 @@ class ReliabilityAssessment:
 
         le = preprocessing.LabelEncoder()
         le.fit(y)
+        self.default_logger.info(f'Label Encoder Classes: {le.classes_}')
         y = le.transform(y)
 
         if grid_search:
@@ -679,11 +695,22 @@ class ReliabilityAssessment:
 
             clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=10)
             clf.fit(X_train, y_train)
-
             self.default_logger.info(clf.best_params_)
-            joblib.dump(clf, './reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}.pkl')
+
             y_true, y_pred = y_test, clf.predict(X_test)
-            print(classification_report(y_true, y_pred))
+            self.default_logger.info(classification_report(y_true, y_pred))
+
+        if gltr_gpt2:
+            clf = SVC(C=1000, gamma=1, kernel='poly', degree=3)
+        elif gltr_bert:
+            clf = SVC(C=1000, gamma=1, kernel='rbf')
+        else:
+            # By far this configuration yields the best performance across two different test cases.
+            clf = SVC(C=1000, gamma=1, kernel='rbf')
+
+        clf.fit(X, y)
+        joblib.dump(clf,
+                    f'./reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl')
 
     def neural_fake_news_verify(self):
         print("Let's Verify")
