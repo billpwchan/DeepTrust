@@ -533,7 +533,7 @@ class ReliabilityAssessment:
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
             self.nv_instance.init_gltr_models(model=gltr_type)
-            SLICES = 2 if gltr_gpt2 else 50
+            SLICES = 1 if gltr_gpt2 else 50
             if fake:
                 gltr_collection = self.db_instance.get_neural_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector",
