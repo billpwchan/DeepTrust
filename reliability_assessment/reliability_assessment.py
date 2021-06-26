@@ -569,6 +569,7 @@ class ReliabilityAssessment:
                     clf = joblib.load(file_path)
                 else:
                     self.default_logger.error(f"Please train your SVM classifier first. Missing {file_path}")
+                    return
 
                 # Get all tweets with feature-filter = True
                 tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
@@ -577,6 +578,12 @@ class ReliabilityAssessment:
                                                                      gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
                                      if f'{gltr_type}-detector' in tweet['ra_raw'] and tweet['ra_raw'][
                                          f'{gltr_type}-detector']]
+                # Classes Order: [0: Human, 1: Machine]
+                SLICES = 60
+                for i in trange(0, len(tweets_collection), SLICES):
+                    y = clf.predict([tweet for tweet in tweets_collection[i:i + SLICES]])
+                    print(y)
+                    break
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 

@@ -29,7 +29,7 @@ def main():
                         choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-update-fake',
                                  'neural-train', 'neural-verify'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
-                        choices=['gpt-2', 'gltr-gpt2', 'gltr-bert'])
+                        choices=['gpt-2', 'gltr-gpt2', 'gltr-bert', 'svm'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -74,6 +74,8 @@ def main():
                 ra_instance.neural_fake_news_update(gltr_gpt2=('gltr-gpt2' in args.models))
             if 'gltr-bert' in args.models:
                 ra_instance.neural_fake_news_update(gltr_bert=('gltr-bert' in args.models))
+            if 'svm' in args.models:
+                ra_instance.neural_fake_news_update(classifier=True)
         if 'neural-update-fake' in args.ra_tasks:
             if 'gpt-2' in args.models:
                 ra_instance.neural_fake_news_update(gpt_2=('gpt-2' in args.models), fake=True)
@@ -86,7 +88,6 @@ def main():
                 ra_instance.neural_fake_news_train_classifier(gltr_gpt2=('gltr-gpt2' in args.models))
             if 'gltr-bert' in args.models:
                 ra_instance.neural_fake_news_train_classifier(gltr_bert=('gltr-bert' in args.models))
-            ra_instance.neural_fake_news_update(classifier=True)
         if 'neural-verify' in args.ra_tasks:
             ra_instance.neural_fake_news_verify()
 
