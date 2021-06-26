@@ -86,7 +86,7 @@ def main():
                 ra_instance.neural_fake_news_train_classifier(gltr_gpt2=('gltr-gpt2' in args.models))
             if 'gltr-bert' in args.models:
                 ra_instance.neural_fake_news_train_classifier(gltr_bert=('gltr-bert' in args.models))
-            ra_instance.neural_fake_news_update()
+            ra_instance.neural_fake_news_update(classifier=True)
         if 'neural-verify' in args.ra_tasks:
             ra_instance.neural_fake_news_verify()
 

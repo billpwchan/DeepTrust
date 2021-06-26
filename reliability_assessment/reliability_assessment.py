@@ -492,7 +492,8 @@ class ReliabilityAssessment:
         tweet_text = self.__tweet_preprocess(tweet['text'])
         return {'_id': tweet['_id'], 'output': self.nv_instance.detect(text=tweet_text, mode=mode)}
 
-    def neural_fake_news_update(self, gpt_2: bool = False, gltr_gpt2: bool = False, gltr_bert: bool = False, fake: bool = False):
+    def neural_fake_news_update(self, gpt_2: bool = False, gltr_gpt2: bool = False, gltr_bert: bool = False,
+                                classifier: bool = False, fake: bool = False):
         # Always clean up fields before starting!
         # if input('CAUTION: DO YOU WANT TO CLEAN RA RESULTS? (Y/N) ') == "Y" and input('DOUBLE CHECK (Y/N) ') == 'Y':
         #     self.db_instance.remove_many('ra_raw', self.input_date, self.ticker)
@@ -559,6 +560,9 @@ class ReliabilityAssessment:
 
                 gc.collect()
             [p.kill() for p in SUB_PROCESSES]
+
+        if classifier:
+            print("Yeah")
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
