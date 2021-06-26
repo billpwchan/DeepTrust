@@ -635,7 +635,7 @@ class ReliabilityAssessment:
             output_list.append([value / sum(entry) for value in entry])
         return output_list
 
-    def neural_fake_news_train_classifier(self, gltr_gpt2: bool = False, gltr_bert: bool = False):
+    def neural_fake_news_train_classifier(self, gltr_gpt2: bool = False, gltr_bert: bool = False, grid_search: bool = False):
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
         else:
@@ -670,20 +670,20 @@ class ReliabilityAssessment:
         le.fit(y)
         y = le.transform(y)
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        if grid_search:
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
-        tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
-                             'C':      [1, 10, 100, 1000]},
-                            {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+            tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
+                                 'C':      [1, 10, 100, 1000]},
+                                {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
 
-        clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=10)
-        clf.fit(X_train, y_train)
+            clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=10)
+            clf.fit(X_train, y_train)
 
-        self.default_logger.info(clf.best_params_)
-        joblib.dump(clf, './reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}.pkl')
-
-        y_true, y_pred = y_test, clf.predict(X_test)
-        print(classification_report(y_true, y_pred))
+            self.default_logger.info(clf.best_params_)
+            joblib.dump(clf, './reliability_assessment/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}.pkl')
+            y_true, y_pred = y_test, clf.predict(X_test)
+            print(classification_report(y_true, y_pred))
 
     def neural_fake_news_verify(self):
         print("Let's Verify")
