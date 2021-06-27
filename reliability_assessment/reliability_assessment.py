@@ -21,6 +21,7 @@ from sklearn import preprocessing
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.svm import SVC
+from sklearnex import patch_sklearn
 from tqdm import trange
 from transformers import (
     GPT2LMHeadModel,
@@ -34,6 +35,7 @@ from transformers import (
 from database.mongodb_atlas import MongoDB
 from util import *
 
+patch_sklearn()
 gc.enable()
 
 SUB_PROCESSES = []
