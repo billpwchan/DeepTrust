@@ -574,18 +574,25 @@ class ReliabilityAssessment:
                     return
 
                 # Get all tweets with feature-filter = True
-                tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
+                tweets_collection = [tweet for tweet in
                                      self.db_instance.get_all_tweets(self.input_date, self.ticker,
                                                                      database='tweet',
                                                                      gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
-                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and tweet['ra_raw'][
-                                         f'{gltr_type}-detector']]
+                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and
+                                     tweet['ra_raw'][f'{gltr_type}-detector']]
+
                 # Classes Order: [0: Human, 1: Machine]
-                SLICES = 60
+                SLICES = 100
                 for i in trange(0, len(tweets_collection), SLICES):
-                    y = clf.predict([tweet for tweet in tweets_collection[i:i + SLICES]])
-                    print(y)
-                    break
+                    tweets_collection_small = tweets_collection[i:i + SLICES]
+                    y = clf.predict_proba(
+                        [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in tweets_collection_small])
+                    self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                     f'ra_raw.{gltr_type}-detector.real_probability',
+                                                     [prob[0] for prob in y], self.input_date, self.ticker)
+                    self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                     f'ra_raw.{gltr_type}-detector.fake_probability',
+                                                     [prob[1] for prob in y], self.input_date, self.ticker)
 
         self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
