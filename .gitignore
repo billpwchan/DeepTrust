@@ -386,3 +386,5 @@ twitter_keys.yaml
 *.bin
 reliability_assessment/roberta_detector/models/*
 reliability_assessment/grover/models/*
+reliability_assessment/infersent/fastText/*
+reliability_assessment/infersent/GloVe/*
