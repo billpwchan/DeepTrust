@@ -384,5 +384,5 @@ config.ini
 twitter_keys.yaml
 *.pt
 *.bin
-reliability_assessment/gpt_detector/models/*
+reliability_assessment/roberta_detector/models/*
 reliability_assessment/grover/models/*

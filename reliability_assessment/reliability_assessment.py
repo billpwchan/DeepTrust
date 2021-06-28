@@ -272,8 +272,8 @@ class NeuralVerifier:
 
     def init_gpt_model(self, model: str = DETECTOR_MAP['gpt-detector']):
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
-        gpt_2_server = subprocess.Popen(["python", "./reliability_assessment/gpt_detector/server.py",
-                                         f"./reliability_assessment/gpt_detector/models/{model}"])
+        gpt_2_server = subprocess.Popen(["python", "./reliability_assessment/roberta_detector/server.py",
+                                         f"./reliability_assessment/roberta_detector/models/{model}"])
         SUB_PROCESSES.append(gpt_2_server)
         while True:
             try:
@@ -303,7 +303,7 @@ class NeuralVerifier:
 
     def __download_models(self, mode: str = 'gpt-2'):
         if mode == 'gpt-2':
-            dir_prefix = "./reliability_assessment/gpt_detector/models/"
+            dir_prefix = "./reliability_assessment/roberta_detector/models/"
             base_model = pathlib.Path(f'{dir_prefix}detector-base.pt')
             if not base_model.exists():
                 open(f'{dir_prefix}detector-base.pt', 'wb').write(
