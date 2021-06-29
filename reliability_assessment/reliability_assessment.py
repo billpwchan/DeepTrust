@@ -20,6 +20,7 @@ import torch
 import torch.nn as nn
 from profanity_check import predict_prob
 from sklearn import preprocessing
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.svm import SVC
@@ -826,7 +827,6 @@ class ReliabilityAssessment:
                 else:
                     self.default_logger.error(f"Please train your SVM classifier first. Missing {file_path}")
                     return
-
                 # Get all tweets with feature-filter = True
                 tweets_collection = [tweet for tweet in
                                      self.db_instance.get_all_tweets(self.input_date, self.ticker,
@@ -978,8 +978,12 @@ class ReliabilityAssessment:
             # By far this configuration yields the best performance across two different test cases.
             clf = SVC(C=1000, gamma=1, kernel='rbf')
 
-        clf.fit(X, y)
-        joblib.dump(clf, f'{PATH_RA}/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl')
+        calibrated_clf = CalibratedClassifierCV(base_estimator=clf, cv=3, n_jobs=-1)
+        calibrated_clf.fit(X, y)
+        joblib.dump(calibrated_clf, f'{PATH_RA}/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl')
+
+        # Evaluate the trained classifier for its performance
+        self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
     def neural_fake_news_verify(self):
         print("Let's Verify")
