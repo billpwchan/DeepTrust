@@ -831,7 +831,8 @@ class ReliabilityAssessment:
                 tweets_collection = [tweet for tweet in
                                      self.db_instance.get_all_tweets(self.input_date, self.ticker,
                                                                      database='tweet',
-                                                                     gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1})
+                                                                     query_override={
+                                                                         f"ra_raw.{gltr_type}-detector.frac_hist": 1})
                                      if f'{gltr_type}-detector' in tweet['ra_raw'] and
                                      tweet['ra_raw'][f'{gltr_type}-detector']]
 
@@ -933,7 +934,8 @@ class ReliabilityAssessment:
                                    tweet['ra_raw'][f'{gltr_type}-detector']]
         machine_tweets_collection = [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in
                                      self.db_instance.get_all_tweets(self.input_date, self.ticker, database='fake',
-                                                                     gltr={f"ra_raw.{gltr_type}-detector.frac_hist": 1},
+                                                                     query_override={
+                                                                         f"ra_raw.{gltr_type}-detector.frac_hist": 1},
                                                                      feature_filter=False)
                                      if f'{gltr_type}-detector' in tweet['ra_raw'] and
                                      tweet['ra_raw'][f'{gltr_type}-detector']]
@@ -986,7 +988,12 @@ class ReliabilityAssessment:
         self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
     def neural_fake_news_verify(self):
-        print("Let's Verify")
+        query_field = {'ra_raw.BERT-detector.real_probability':    1,
+                       'ra_raw.gpt2-xl-detector.real_probability': 1,
+                       'ra_raw.RoBERTa-detector.real_probability': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True,
+                                                            query_override=query_field)
 
     def subjectivity_sentence_emb(self):
         V = 2
