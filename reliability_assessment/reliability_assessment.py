@@ -96,7 +96,7 @@ class TweetGeneration:
             args.model_type = args.model_type.lower()
             model_class, tokenizer_class = TweetGeneration.MODEL_CLASSES[args.model_type]
         except KeyError:
-            raise KeyError("the model {} you specified is not supported. You are welcome to add it and open a PR :)")
+            raise KeyError("the model {} you specified is not supported.")
 
         self.tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
         self.model = model_class.from_pretrained(args.model_name_or_path)
@@ -163,9 +163,9 @@ class TweetGeneration:
         :param temperature: Temperature of 1.0 has no effect, lower tend toward greedy sampling
                             Temperature -> Boltzmann distribution - Sampling deterministic
         :param repetition_penalty: Not useful for gpt-2 model
-        :param k: Sampling range
-        :param p:
-        :param prefix:
+        :param k: K-Truncation
+        :param p: Nucleus Sampling
+        :param prefix: Prompt text
         :param xlm_language:
         :param seed:
         :param no_cuda:
@@ -987,13 +987,49 @@ class ReliabilityAssessment:
         # Evaluate the trained classifier for its performance
         self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
+    def __neural_rules(self, roberta_prob: dict, gpt2_prob: dict, bert_prob: dict) -> bool or None:
+        """
+        The rule can be:
+        1) If roberta_prob['real'] is greater than the threshold (e.g., 0.8), we say the tweet is definitely real
+        2) If weighted average of gpt2 and bert['fake'] is greater than the threshold (e.g., 0.8), we say the tweet is definitely fake
+        3) Otherwise, we say they are unknown / not conclusive
+        :param roberta_prob: Real and Fake probability from the RoBERTa based Calibrated SVM Classifier
+        :param gpt2_prob: Real and Fake probability from the GPT2-XL based Calibrated SVM Classifier
+        :param bert_prob: Real and Fake probability from the BERT based Calibrated SVM Classifier
+        :return:
+        """
+        if roberta_prob['real_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
+            return True
+        else:
+            gpt2_weight = self.config.getfloat('RA.Neural.Config', 'gpt2_weight')
+            bert_weight = self.config.getfloat('RA.Neural.Config', 'bert_weight')
+            classifier_score = gpt2_weight * gpt2_prob['fake_probability'] + bert_weight * bert_prob['fake_probability']
+            if classifier_score > self.config.getfloat('RA.Neural.Config', 'classifier_threshold'):
+                return False
+
+        return None
+
     def neural_fake_news_verify(self):
         query_field = {'ra_raw.BERT-detector.real_probability':    1,
+                       'ra_raw.BERT-detector.fake_probability':    1,
                        'ra_raw.gpt2-xl-detector.real_probability': 1,
-                       'ra_raw.RoBERTa-detector.real_probability': 1}
+                       'ra_raw.gpt2-xl-detector.fake_probability': 1,
+                       'ra_raw.RoBERTa-detector.real_probability': 1,
+                       'ra_raw.RoBERTa-detector.fake_probability': 1}
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                             ra_raw=False, feature_filter=True,
                                                             query_override=query_field)
+
+        SLICES = 100
+        for i in trange(0, len(tweets_collection), SLICES):
+            tweets_collection_small = tweets_collection[i:i + SLICES]
+            neural_filter = [self.__neural_rules(roberta_prob=tweet['ra_raw']['RoBERTa-detector'],
+                                                 gpt2_prob=tweet['ra_raw']['gpt2-xl-detector'],
+                                                 bert_prob=tweet['ra_raw']['BERT-detector'])
+                             for tweet in tweets_collection_small]
+
+            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                             'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
     def subjectivity_sentence_emb(self):
         V = 2
