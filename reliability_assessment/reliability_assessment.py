@@ -1046,4 +1046,4 @@ class ReliabilityAssessment:
 
         infersent.build_vocab_k_words(K=100000)
         # Sentence Embedding instead of Word Embedding
-        embeddings = infersent.encode(sentences, bsize=128, tokenize=False, verbose=True)
+        # embeddings = infersent.encode(sentences, bsize=128, tokenize=False, verbose=True)
