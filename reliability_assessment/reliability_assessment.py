@@ -4,6 +4,7 @@ import concurrent.futures
 import configparser
 import gc
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -1004,9 +1005,9 @@ class ReliabilityAssessment:
             gpt2_weight = self.config.getfloat('RA.Neural.Config', 'gpt2_weight')
             bert_weight = self.config.getfloat('RA.Neural.Config', 'bert_weight')
             classifier_score = gpt2_weight * gpt2_prob['fake_probability'] + bert_weight * bert_prob['fake_probability']
-            if classifier_score > self.config.getfloat('RA.Neural.Config', 'classifier_threshold'):
+            if classifier_score > self.config.getfloat('RA.Neural.Config', 'classifier_threshold') and \
+                    roberta_prob['fake_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
                 return False
-
         return None
 
     def neural_fake_news_verify(self):
@@ -1031,13 +1032,18 @@ class ReliabilityAssessment:
             self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                              'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
-    def subjectivity_sentence_emb(self):
-        V = 2
-        MODEL_PATH = f'encoder/infersent{V}.pkl'
+    def subjectivity_sentence_emb(self, model_version: int):
+        MODEL_PATH = f'encoder/infersent{model_version}.pkl'
+        W2V_PATH = f'{PATH_RA}/infersent/fastText/crawl-300d-2M.vec' if model_version == 2 else f'{PATH_RA}/infersent/GloVe/glove.840B.300d.txt'
+        assert os.path.isfile(MODEL_PATH) and os.path.isfile(W2V_PATH), 'Please Set InferSent MODEL and GloVe Paths'
+
         params_model = {'bsize':     64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
-                        'pool_type': 'max', 'dpout_model': 0.0, 'version': V}
+                        'pool_type': 'max', 'dpout_model': 0.0, 'version': model_version}
         infersent = InferSent(params_model)
         infersent.load_state_dict(torch.load(MODEL_PATH))
 
-        W2V_PATH = f'{PATH_RA}/infersent/fastText/crawl-300d-2M.vec' if V == 2 else f'{PATH_RA}/infersent/GloVe/glove.840B.300d.txt'
         infersent.set_w2v_path(W2V_PATH)
+
+        infersent.build_vocab_k_words(K=100000)
+        # Sentence Embedding instead of Word Embedding
+        embeddings = infersent.encode(sentences, bsize=128, tokenize=False, verbose=True)
