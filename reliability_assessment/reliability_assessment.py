@@ -830,12 +830,11 @@ class ReliabilityAssessment:
                     return
                 # Get all tweets with feature-filter = True
                 tweets_collection = [tweet for tweet in
-                                     self.db_instance.get_all_tweets(self.input_date, self.ticker,
-                                                                     database='tweet',
+                                     self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                                      projection_override={
                                                                          f"ra_raw.{gltr_type}-detector.frac_hist": 1})
-                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and
-                                     tweet['ra_raw'][f'{gltr_type}-detector']]
+                                     if f'{gltr_type}-detector' in tweet['ra_raw'] and tweet['ra_raw'][
+                                         f'{gltr_type}-detector']]
 
                 # Classes Order: [0: Human, 1: Machine]
                 SLICES = 100
@@ -999,6 +998,9 @@ class ReliabilityAssessment:
         :param bert_prob: Real and Fake probability from the BERT based Calibrated SVM Classifier
         :return:
         """
+        # Empty dicts, mostly caused by tokenizer errors. Ignore them.
+        if not roberta_prob or not gpt2_prob or not bert_prob:
+            return False
         if roberta_prob['real_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
             return True
         else:
