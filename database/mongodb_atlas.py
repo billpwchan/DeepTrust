@@ -59,7 +59,7 @@ class MongoDB:
             self.db[collection_name].drop()
 
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
-                       feature_filter: bool = True, query_override: dict = None) -> list:
+                       feature_filter: bool = True, projection_override: dict = None) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
         query_field = {"$and": [
@@ -67,8 +67,8 @@ class MongoDB:
             {'ra_raw.feature-filter': True}]
         } if feature_filter else {}
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
-        if query_override is not None:
-            unselect_filed = query_override
+        if projection_override is not None:
+            unselect_filed = projection_override
         return [record for record in self.db[collection_name].find(query_field, unselect_filed)]
 
     def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
