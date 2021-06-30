@@ -1010,7 +1010,10 @@ class ReliabilityAssessment:
             if classifier_score > self.config.getfloat('RA.Neural.Config', 'classifier_threshold') and \
                     roberta_prob['fake_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
                 return False
-        return None
+
+        neural_mode = self.config.get('RA.Neural.Config', 'neural_mode')
+        assert neural_mode == '' or neural_mode == 'Recall' or neural_mode == 'Precisions', "Invalid Neural Mode"
+        return None if neural_mode == '' else True if neural_mode == 'Recall' else False
 
     def neural_fake_news_verify(self):
         projection_field = {'ra_raw.BERT-detector.real_probability':    1,
