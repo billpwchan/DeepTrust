@@ -91,7 +91,7 @@ def main():
         if 'neural-verify' in args.ra_tasks:
             ra_instance.neural_fake_news_verify()
         if 'subj-eval' in args.ra_tasks:
-            ra_instance.subjectivity_sentence_emb(model_version=2)
+            ra_instance.subjectivity_train()
 
 
 if __name__ == '__main__':

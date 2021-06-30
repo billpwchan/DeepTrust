@@ -23,7 +23,7 @@ from profanity_check import predict_prob
 from sklearn import preprocessing
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import classification_report
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
 from tqdm import trange
@@ -37,6 +37,7 @@ from transformers import (
 )
 
 from database.mongodb_atlas import MongoDB
+from reliability_assessment.infersent.classifier import MLP
 from util import *
 
 patch_sklearn()
@@ -1078,3 +1079,48 @@ class ReliabilityAssessment:
         enc_input = np.vstack(enc_input)
 
         self.default_logger.info(f'Generated Sentence Embedding: {enc_input.shape}')
+        return enc_input, sorted_labels
+
+    def subjectivity_train(self):
+        enc_input, sorted_labels = self.subjectivity_sentence_emb(model_version=2)
+
+        config = {'nclasses':   2, 'seed': 1111,
+                  'classifier': {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128, 'tenacity': 3, 'epoch_size': 2},
+                  'nhid':       0, 'k_fold': 10}
+        X = enc_input
+        y = np.array(sorted_labels)
+
+        regs = [10 ** t for t in range(-5, -1)]
+        skf = StratifiedKFold(n_splits=config['k_fold'], shuffle=True, random_state=config['seed'])
+        innerskf = StratifiedKFold(n_splits=config['k_fold'], shuffle=True, random_state=config['seed'])
+
+        devresults = []
+        testresults = []
+        count = 0
+        for train_idx, test_idx in skf.split(X, y):
+            count += 1
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            scores = []
+            for reg in regs:
+                regscores = []
+                for inner_train_idx, inner_test_idx in innerskf.split(X_train, y_train):
+                    X_in_train, X_in_test = X_train[inner_train_idx], X_train[inner_test_idx]
+                    y_in_train, y_in_test = y_train[inner_train_idx], y_train[inner_test_idx]
+                    clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=reg,
+                              seed=config['seed'])
+                    clf.fit(X_in_train, y_in_train, validation_data=(X_in_test, y_in_test))
+                    regscores.append(clf.score(X_in_test, y_in_test))
+                scores.append(round(100 * np.mean(regscores), 2))
+            optreg = regs[np.argmax(scores)]
+            self.default_logger.info(f'Best param found at split {count}: l2reg = {optreg} with score {np.max(scores)}')
+            devresults.append(np.max(scores))
+
+            clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=optreg,
+                      seed=config['seed'])
+            clf.fit(X_train, y_train, validation_split=0.05)
+            testresults.append(round(100 * clf.score(X_test, y_test), 2))
+
+        devaccuracy = round(np.mean(devresults), 2)
+        testaccuracy = round(np.mean(testresults), 2)
+        self.default_logger.info(f'Dev Acc: {devaccuracy}, Test Acc: {testaccuracy}')
