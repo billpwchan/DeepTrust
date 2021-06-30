@@ -1012,8 +1012,8 @@ class ReliabilityAssessment:
                 return False
 
         neural_mode = self.config.get('RA.Neural.Config', 'neural_mode')
-        assert neural_mode == '' or neural_mode == 'Recall' or neural_mode == 'Precisions', "Invalid Neural Mode"
-        return None if neural_mode == '' else True if neural_mode == 'Recall' else False
+        assert neural_mode == '' or neural_mode == 'recall' or neural_mode == 'precision', "Invalid Neural Mode"
+        return None if neural_mode == '' else True if neural_mode == 'recall' else False
 
     def neural_fake_news_verify(self):
         projection_field = {'ra_raw.BERT-detector.real_probability':    1,
