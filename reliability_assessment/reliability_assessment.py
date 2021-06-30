@@ -1094,9 +1094,10 @@ class ReliabilityAssessment:
         skf = StratifiedKFold(n_splits=config['k_fold'], shuffle=True, random_state=config['seed'])
         innerskf = StratifiedKFold(n_splits=config['k_fold'], shuffle=True, random_state=config['seed'])
 
-        devresults = []
-        testresults = []
+        dev_results = []
+        test_results = []
         count = 0
+        opt_reg = 0
         for train_idx, test_idx in skf.split(X, y):
             count += 1
             X_train, X_test = X[train_idx], X[test_idx]
@@ -1112,15 +1113,22 @@ class ReliabilityAssessment:
                     clf.fit(X_in_train, y_in_train, validation_data=(X_in_test, y_in_test))
                     regscores.append(clf.score(X_in_test, y_in_test))
                 scores.append(round(100 * np.mean(regscores), 2))
-            optreg = regs[np.argmax(scores)]
-            self.default_logger.info(f'Best param found at split {count}: l2reg = {optreg} with score {np.max(scores)}')
-            devresults.append(np.max(scores))
+            opt_reg = regs[np.argmax(scores)]
+            self.default_logger.info(
+                f'Best param found at split {count}: l2reg = {opt_reg} with score {np.max(scores)}')
+            dev_results.append(np.max(scores))
 
-            clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=optreg,
+            clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=opt_reg,
                       seed=config['seed'])
             clf.fit(X_train, y_train, validation_split=0.05)
-            testresults.append(round(100 * clf.score(X_test, y_test), 2))
 
-        devaccuracy = round(np.mean(devresults), 2)
-        testaccuracy = round(np.mean(testresults), 2)
-        self.default_logger.info(f'Dev Acc: {devaccuracy}, Test Acc: {testaccuracy}')
+            test_results.append(round(100 * clf.score(X_test, y_test), 2))
+
+        dev_accuracy = round(np.mean(dev_results), 2)
+        test_accuracy = round(np.mean(test_results), 2)
+        self.default_logger.info(f'Dev Acc: {dev_accuracy}, Test Acc: {test_accuracy}')
+
+        clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=opt_reg,
+                  seed=config['seed'])
+        clf.fit(X, y, validation_split=0.05)
+        joblib.dump(clf, f'{PATH_RA}/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl')
