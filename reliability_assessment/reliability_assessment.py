@@ -759,7 +759,7 @@ class ReliabilityAssessment:
         if gpt_2:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            SLICES = 10  # Good for 1080 Ti
+            batch_size = 10  # Good for 1080 Ti
             if fake:
                 gpt_collection = \
                     self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
@@ -772,8 +772,8 @@ class ReliabilityAssessment:
                                                                                 self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
-            for i in trange(0, len(gpt_collection), SLICES):
-                tweets_collection_small = gpt_collection[i:i + SLICES]
+            for i in trange(0, len(gpt_collection), batch_size):
+                tweets_collection_small = gpt_collection[i:i + batch_size]
                 # Update RoBERTa-detector Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gpt_2_futures = [executor.submit(self.detector_wrapper, tweet, DETECTOR_MAP['gpt-detector']) for
@@ -791,7 +791,7 @@ class ReliabilityAssessment:
         if gltr_gpt2 or gltr_bert:
             gltr_type = DETECTOR_MAP['gltr-detector'][0] if gltr_gpt2 else DETECTOR_MAP['gltr-detector'][1]
             self.nv_instance.init_gltr_models(model=gltr_type)
-            SLICES = 1 if gltr_gpt2 else 50
+            batch_size = 1 if gltr_gpt2 else 50
             if fake:
                 gltr_collection = self.db_instance.get_neural_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector",
@@ -804,8 +804,8 @@ class ReliabilityAssessment:
                     f"ra_raw.{gltr_type}-detector", self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
 
-            for i in trange(0, len(gltr_collection), SLICES):
-                tweets_collection_small = gltr_collection[i:i + SLICES]
+            for i in trange(0, len(gltr_collection), batch_size):
+                tweets_collection_small = gltr_collection[i:i + batch_size]
                 # Update GLTR Results
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     gltr_futures = [executor.submit(self.detector_wrapper, tweet, gltr_type)
@@ -837,9 +837,9 @@ class ReliabilityAssessment:
                                          f'{gltr_type}-detector']]
 
                 # Classes Order: [0: Human, 1: Machine]
-                SLICES = 100
-                for i in trange(0, len(tweets_collection), SLICES):
-                    tweets_collection_small = tweets_collection[i:i + SLICES]
+                batch_size = 100
+                for i in trange(0, len(tweets_collection), batch_size):
+                    tweets_collection_small = tweets_collection[i:i + batch_size]
                     y = clf.predict_proba(
                         [tweet['ra_raw'][f'{gltr_type}-detector']['frac_hist'] for tweet in tweets_collection_small])
                     self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
@@ -898,9 +898,9 @@ class ReliabilityAssessment:
 
         self.tg_instance.set_model(model_type, model_name_or_path)
 
-        SLICES = 60
-        for i in trange(0, len(tweets_collection), SLICES):
-            tweets_collection_small = [tweet for tweet in tweets_collection[i:i + SLICES] if
+        batch_size = 60
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = [tweet for tweet in tweets_collection[i:i + batch_size] if
                                        not self.db_instance.check_record_exists("original_id", tweet['id'],
                                                                                 self.input_date,
                                                                                 self.ticker, database='fake')]
@@ -1026,9 +1026,9 @@ class ReliabilityAssessment:
                                                             ra_raw=False, feature_filter=True,
                                                             projection_override=projection_field)
 
-        SLICES = 100
-        for i in trange(0, len(tweets_collection), SLICES):
-            tweets_collection_small = tweets_collection[i:i + SLICES]
+        batch_size = 100
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
             neural_filter = [self.__neural_rules(roberta_prob=tweet['ra_raw']['RoBERTa-detector'],
                                                  gpt2_prob=tweet['ra_raw']['gpt2-xl-detector'],
                                                  bert_prob=tweet['ra_raw']['BERT-detector'])
@@ -1037,18 +1037,44 @@ class ReliabilityAssessment:
             self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                              'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
+    @staticmethod
+    def __infersent_embeddings(model, batch, batch_size=128) -> list:
+        sentences = [' '.join(s) for s in batch]
+        embeddings = model.encode(sentences, bsize=batch_size, tokenize=False)
+        return embeddings
+
     def subjectivity_sentence_emb(self, model_version: int):
-        MODEL_PATH = f'encoder/infersent{model_version}.pkl'
+        MODEL_PATH = f'{PATH_RA}/infersent/encoder/infersent{model_version}.pkl'
         W2V_PATH = f'{PATH_RA}/infersent/fastText/crawl-300d-2M.vec' if model_version == 2 else f'{PATH_RA}/infersent/GloVe/glove.840B.300d.txt'
-        assert os.path.isfile(MODEL_PATH) and os.path.isfile(W2V_PATH), 'Please Set InferSent MODEL and GloVe Paths'
+        assert os.path.isfile(MODEL_PATH) and os.path.isfile(W2V_PATH), 'Please Set InferSent MODEL and W2V Paths'
 
         params_model = {'bsize':     64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
                         'pool_type': 'max', 'dpout_model': 0.0, 'version': model_version}
         infersent = InferSent(params_model)
         infersent.load_state_dict(torch.load(MODEL_PATH))
+        infersent = infersent.cuda() if torch.cuda.is_available() else infersent
 
         infersent.set_w2v_path(W2V_PATH)
+        infersent.build_vocab_k_words(K=1999995)
 
-        infersent.build_vocab_k_words(K=100000)
-        # Sentence Embedding instead of Word Embedding
-        # embeddings = infersent.encode(sentences, bsize=128, tokenize=False, verbose=True)
+        with open(f'{PATH_RA}/infersent/SUBJ/subj.objective', 'r', encoding='latin-1') as f:
+            obj = [line.split() for line in f.read().splitlines()]
+        with open(f'{PATH_RA}/infersent/SUBJ/subj.subjective', 'r', encoding='latin-1') as f:
+            subj = [line.split() for line in f.read().splitlines()]
+
+        samples, labels = obj + subj, [1] * len(obj) + [0] * len(subj)
+        n_samples = len(samples)
+        batch_size = 128
+        enc_input = []
+        # Sort to reduce padding
+        sorted_corpus = sorted(zip(samples, labels), key=lambda z: (len(z[0]), z[1]))
+        sorted_samples = [x for (x, y) in sorted_corpus]
+        sorted_labels = [y for (x, y) in sorted_corpus]
+        logging.info('Generating sentence embeddings')
+        for ii in range(0, n_samples, batch_size):
+            batch = sorted_samples[ii:ii + batch_size]
+            embeddings = self.__infersent_embeddings(infersent, batch, batch_size)
+            enc_input.append(embeddings)
+        enc_input = np.vstack(enc_input)
+
+        self.default_logger.info(f'Generated Sentence Embedding: {enc_input.shape}')
