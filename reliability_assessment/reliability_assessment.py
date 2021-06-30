@@ -273,20 +273,20 @@ class TweetGeneration:
 
 class NeuralVerifier:
     def __init__(self):
-        logging = logger.get_logger('neural_verifier')
+        self.default_logger = logger.get_logger('neural_verifier')
         for detector in DETECTOR_MAP['detectors']:
             self.__download_models(mode=detector)
         # python run_discrimination.py --input_data input_data.jsonl --output_dir models/mega-0.96 --config_file lm/configs/mega.json --predict_val true
 
     def init_gpt_model(self, model: str = DETECTOR_MAP['gpt-detector']):
-        logging.info("Initialize GPT-2 Neural Verifier")
+        self.default_logger.info("Initialize GPT-2 Neural Verifier")
         gpt_2_server = subprocess.Popen(["python", f"{PATH_RA}/roberta_detector/server.py",
                                          f"{PATH_RA}/roberta_detector/models/{model}"])
         SUB_PROCESSES.append(gpt_2_server)
         while True:
             try:
                 if requests.get(f"{DETECTOR_MAP['gpt-detector-server']}").status_code is not None:
-                    logging.info("GPT-2 Neural Verifier Initialized")
+                    self.default_logger.info("GPT-2 Neural Verifier Initialized")
                     break
             except requests.exceptions.ConnectionError:
                 continue
@@ -296,7 +296,7 @@ class NeuralVerifier:
             raise RuntimeError
 
         default_port = DETECTOR_MAP['gltr-detector-server'][DETECTOR_MAP['gltr-detector'].index(model)][-5:-1]
-        logging.info(f"Initialize GLTR {model}")
+        self.default_logger.info(f"Initialize GLTR {model}")
         gltr_gpt_server = subprocess.Popen(
             ["python", f"{PATH_RA}/gltr/server.py", "--model", f"{model}", "--port",
              f"{default_port}"])
@@ -304,7 +304,7 @@ class NeuralVerifier:
         while True:
             try:
                 if requests.get(f'http://localhost:{default_port}/').status_code is not None:
-                    logging.info(f"GLTR {model} Initialized")
+                    self.default_logger.info(f"GLTR {model} Initialized")
                     break
             except requests.exceptions.ConnectionError:
                 continue
@@ -317,17 +317,17 @@ class NeuralVerifier:
                 open(f'{dir_prefix}detector-base.pt', 'wb').write(
                     requests.get(
                         'https://openaipublic.azureedge.net/gpt-2/detector-models/v1/detector-base.pt').content)
-                logging.info(f'{mode} base model downloaded')
+                self.default_logger.info(f'{mode} base model downloaded')
             else:
-                logging.info(f'{mode} base model exists')
+                self.default_logger.info(f'{mode} base model exists')
             large_model = pathlib.Path(f'{dir_prefix}detector-large.pt')
             if not large_model.exists():
                 open(f'{dir_prefix}detector-large.pt', 'wb').write(
                     requests.get(
                         'https://openaipublic.azureedge.net/gpt-2/detector-models/v1/detector-large.pt').content)
-                logging.info(f'{mode} large model downloaded')
+                self.default_logger.info(f'{mode} large model downloaded')
             else:
-                logging.info(f'{mode} large model exists')
+                self.default_logger.info(f'{mode} large model exists')
         if mode == 'grover':
             dir_prefix = f"{PATH_RA}/grover/models/mega-0.94/"
             model_type = 'discrimination'
@@ -344,9 +344,9 @@ class NeuralVerifier:
                         chunk_size = 1000
                         for chunk in r.iter_content(chunk_size=chunk_size):
                             f.write(chunk)
-                    logging.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded")
+                    self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} downloaded")
                 else:
-                    logging.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
+                    self.default_logger.info(f"{mode} {model_type}/model.ckpt.{ext} exists")
 
     def detect(self, text, mode: str = DETECTOR_MAP['gpt-detector']) -> dict or list:
         """
@@ -370,7 +370,7 @@ class NeuralVerifier:
                 except requests.exceptions.ConnectionError:
                     time.sleep(1)
                     continue
-            # logging.info(f'{mode}: {response.text}')
+            # self.default_logger.info(f'{mode}: {response.text}')
             # Return a dict representation of the returned text
             return ast.literal_eval(response.text) if response is not None else {}
         elif mode in DETECTOR_MAP['gltr-detector']:
@@ -402,7 +402,7 @@ class NeuralVerifier:
                 gltr_result['frac_hist'] = frac_histogram[0].tolist()
                 output_data = gltr_result
             else:
-                logging.error(f'GLTR Exception: {payload}')
+                self.default_logger.error(f'GLTR Exception: {payload}')
                 output_data = {}
             return output_data
         else:
@@ -665,7 +665,7 @@ class ReliabilityAssessment:
         self.nv_instance = NeuralVerifier()
         self.db_instance = MongoDB()
         self.tg_instance = TweetGeneration()
-        logging = logger.get_logger('reliability_assessment')
+        self.default_logger = logger.get_logger('reliability_assessment')
         self.config = configparser.ConfigParser()
         self.config.read('./config.ini')
         atexit.register(lambda: [p.kill() for p in SUB_PROCESSES])
@@ -771,7 +771,7 @@ class ReliabilityAssessment:
             else:
                 gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
                                                                                 self.input_date, self.ticker)
-            logging.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
+            self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
             for i in trange(0, len(gpt_collection), batch_size):
                 tweets_collection_small = gpt_collection[i:i + batch_size]
@@ -803,7 +803,7 @@ class ReliabilityAssessment:
             else:
                 gltr_collection = self.db_instance.get_neural_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector", self.input_date, self.ticker)
-            logging.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
+            self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
 
             for i in trange(0, len(gltr_collection), batch_size):
                 tweets_collection_small = gltr_collection[i:i + batch_size]
@@ -827,7 +827,7 @@ class ReliabilityAssessment:
                 if file_path_check.is_file():
                     clf = joblib.load(file_path)
                 else:
-                    logging.error(f"Please train your SVM classifier first. Missing {file_path}")
+                    self.default_logger.error(f"Please train your SVM classifier first. Missing {file_path}")
                     return
                 # Get all tweets with feature-filter = True
                 tweets_collection = [tweet for tweet in
@@ -850,7 +850,7 @@ class ReliabilityAssessment:
                                                      f'ra_raw.{gltr_type}-detector.fake_probability',
                                                      [prob[1] for prob in y], self.input_date, self.ticker)
 
-        logging.info("Neural Fake News Detector Output Update Success!")
+        self.default_logger.info("Neural Fake News Detector Output Update Success!")
 
     def neural_fake_news_dataset_handle(self):
         tweets_collection = [self.__tweet_preprocess(tweet['text']).replace("\n", "") for tweet in
@@ -940,8 +940,8 @@ class ReliabilityAssessment:
                                                                      feature_filter=False)
                                      if f'{gltr_type}-detector' in tweet['ra_raw'] and
                                      tweet['ra_raw'][f'{gltr_type}-detector']]
-        logging.info(f'Human-Written Tweets Training Samples: {len(human_tweets_collection)}')
-        logging.info(f'Machine-Written Tweets Training Samples: {len(machine_tweets_collection)}')
+        self.default_logger.info(f'Human-Written Tweets Training Samples: {len(human_tweets_collection)}')
+        self.default_logger.info(f'Machine-Written Tweets Training Samples: {len(machine_tweets_collection)}')
 
         human_tweets_collection = self.__frac_hist_handle(human_tweets_collection)
         machine_tweets_collection = self.__frac_hist_handle(machine_tweets_collection)
@@ -956,7 +956,7 @@ class ReliabilityAssessment:
 
         le = preprocessing.LabelEncoder()
         le.fit(y)
-        logging.info(f'Label Encoder Classes: {le.classes_}')
+        self.default_logger.info(f'Label Encoder Classes: {le.classes_}')
         y = le.transform(y)
 
         if grid_search:
@@ -968,10 +968,10 @@ class ReliabilityAssessment:
 
             clf = GridSearchCV(SVC(), tuned_parameters, scoring='accuracy', n_jobs=-1, verbose=3, cv=10)
             clf.fit(X_train, y_train)
-            logging.info(clf.best_params_)
+            self.default_logger.info(clf.best_params_)
 
             y_true, y_pred = y_test, clf.predict(X_test)
-            logging.info(classification_report(y_true, y_pred))
+            self.default_logger.info(classification_report(y_true, y_pred))
 
         if gltr_gpt2:
             clf = SVC(C=1000, gamma=1, kernel='poly', degree=3)
@@ -986,7 +986,7 @@ class ReliabilityAssessment:
         joblib.dump(calibrated_clf, f'{PATH_RA}/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl')
 
         # Evaluate the trained classifier for its performance
-        logging.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
+        self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
     def __neural_rules(self, roberta_prob: dict, gpt2_prob: dict, bert_prob: dict) -> bool or None:
         """
@@ -1082,7 +1082,7 @@ class ReliabilityAssessment:
             enc_input.append(embeddings)
         enc_input = np.vstack(enc_input)
 
-        logging.info(f'Generated Sentence Embedding: {enc_input.shape}')
+        self.default_logger.info(f'Generated Sentence Embedding: {enc_input.shape}')
         return enc_input, sorted_labels
 
     def subjectivity_train(self):
@@ -1118,7 +1118,7 @@ class ReliabilityAssessment:
                     regscores.append(clf.score(X_in_test, y_in_test))
                 scores.append(round(100 * np.mean(regscores), 2))
             opt_reg = regs[np.argmax(scores)]
-            logging.info(
+            self.default_logger.info(
                 f'Best param found at split {count}: l2reg = {opt_reg} with score {np.max(scores)}')
             dev_results.append(np.max(scores))
 
@@ -1130,7 +1130,7 @@ class ReliabilityAssessment:
 
         dev_accuracy = round(np.mean(dev_results), 2)
         test_accuracy = round(np.mean(test_results), 2)
-        logging.info(f'Dev Acc: {dev_accuracy}, Test Acc: {test_accuracy}')
+        self.default_logger.info(f'Dev Acc: {dev_accuracy}, Test Acc: {test_accuracy}')
 
         clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=opt_reg,
                   seed=config['seed'])
