@@ -904,7 +904,6 @@ class ReliabilityAssessment:
         text = ReliabilityAssessment.__tweet_preprocess(text)
         text = emoji.demojize(text, delimiters=("", ""))
         text = " ".join(text_processor.pre_process_doc(text))
-        text = re.sub(r'<\w*>', '', text)
         text = re.sub(' +', ' ', text.strip())
         text = p.clean(tweet_string=text)
         text = TweetTokenizer().tokenize(text)
@@ -921,9 +920,9 @@ class ReliabilityAssessment:
 
         text_processor = TextPreProcessor(
             # terms that will be normalized
-            normalize=['url', 'email', 'percent', 'money', 'phone', 'user', 'time', 'date', 'number'],
+            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'hashtag'],
             annotate=[],
-            fix_html=True,  # fix HTML tokens
+            fix_bad_unicode=True,  # fix HTML tokens
             segmenter="twitter",
             corrector="twitter",
             unpack_hashtags=True,  # perform word segmentation on hashtags
