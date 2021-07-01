@@ -11,19 +11,18 @@ import subprocess
 import time
 from datetime import date
 from random import randint
-
+import preprocessor as p
+from nltk.tokenize import TweetTokenizer
 import emoji
 import joblib
 import nltk
 import numpy as np
 import pandas as pd
-import preprocessor as p
 import requests
 import torch
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
-from nltk.tokenize import TweetTokenizer
 from profanity_check import predict_prob
 from sklearn import preprocessing
 from sklearn.calibration import CalibratedClassifierCV
@@ -413,6 +412,7 @@ class NeuralVerifier:
             return output_data
         else:
             raise NotImplementedError
+
 
 class ReliabilityAssessment:
     def __init__(self, input_date: date, ticker: str):
