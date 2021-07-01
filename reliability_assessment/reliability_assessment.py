@@ -1045,9 +1045,9 @@ class ReliabilityAssessment:
                                              'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
     @staticmethod
-    def __infersent_embeddings(model, batch, batch_size=8) -> list:
+    def __infersent_embeddings(model, batch, batch_size=8, tokenize=False) -> list:
         sentences = [' '.join(s) for s in batch]
-        embeddings = model.encode(sentences, bsize=batch_size, tokenize=False)
+        embeddings = model.encode(sentences, bsize=batch_size, tokenize=tokenize)
         return embeddings
 
     @staticmethod
@@ -1073,6 +1073,7 @@ class ReliabilityAssessment:
         with open(f'{PATH_RA}/infersent/SUBJ/subj.subjective', 'r', encoding='latin-1') as f:
             subj = [line.split() for line in f.read().splitlines()]
 
+        # REMEMBER: OBJ = 1, SUB = 0
         samples, labels = obj + subj, [1] * len(obj) + [0] * len(subj)
         n_samples = len(samples)
         batch_size = 128
@@ -1160,6 +1161,11 @@ class ReliabilityAssessment:
         return text
 
     def subjectivity_verify(self, model_version: int):
+        """
+        Verify text using sentence embedding.
+        OBJ => 1, SUBJ => 0
+        :param model_version:
+        """
         MODEL_PATH = f'{PATH_RA}/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl'
         assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
 
@@ -1189,5 +1195,7 @@ class ReliabilityAssessment:
             tweets_collection_small = tweets_collection[i:i + batch_size]
             tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                            tweets_collection_small]
-            print(tweets_text[0])
-            enc_input = self.__infersent_embeddings(infersent, tweets_text)
+            enc_input = np.vstack(self.__infersent_embeddings(infersent, tweets_text))
+
+            result = clf.predict(enc_input)
+            print(result)
