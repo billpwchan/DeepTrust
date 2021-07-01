@@ -59,13 +59,17 @@ class MongoDB:
             self.db[collection_name].drop()
 
     def get_all_tweets(self, input_date: date, ticker: str, database: str = 'tweet', ra_raw: bool = False,
-                       feature_filter: bool = True, projection_override: dict = None) -> list:
+                       feature_filter: bool = True, neural_filter: bool = False,
+                       projection_override: dict = None) -> list:
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve records from database {collection_name}')
-        query_field = {"$and": [
-            {'ra_raw.feature-filter': {'$exists': True}},
-            {'ra_raw.feature-filter': True}]
-        } if feature_filter else {}
+        query_field = {}
+        if feature_filter:
+            query_field['$and'] = [
+                {'ra_raw.feature-filter': {'$exists': True}},
+                {'ra_raw.feature-filter': True}]
+        if neural_filter:
+            query_field['$and'].append({'ra_raw.neural-filter': True})
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
         if projection_override is not None:
             unselect_filed = projection_override

@@ -11,7 +11,9 @@ import subprocess
 import time
 from datetime import date
 from random import randint
+import preprocessor as p
 
+import emoji
 import joblib
 import nltk
 import numpy as np
@@ -19,6 +21,9 @@ import pandas as pd
 import requests
 import torch
 import torch.nn as nn
+from ekphrasis.classes.preprocessor import TextPreProcessor
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
 from profanity_check import predict_prob
 from sklearn import preprocessing
 from sklearn.calibration import CalibratedClassifierCV
@@ -35,6 +40,7 @@ from transformers import (
     XLMTokenizer,
     XLMWithLMHeadModel,
 )
+from ekphrasis.classes.segmenter import Segmenter
 
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.infersent.classifier import MLP
@@ -1085,7 +1091,7 @@ class ReliabilityAssessment:
         self.default_logger.info(f'Generated Sentence Embedding: {enc_input.shape}')
         return enc_input, sorted_labels
 
-    def subjectivity_train(self):
+    def subjectivity_train(self, model_version):
         enc_input, sorted_labels = self.subjectivity_sentence_emb(model_version=2)
 
         config = {'nclasses':   2, 'seed': 1111,
@@ -1137,5 +1143,50 @@ class ReliabilityAssessment:
         clf.fit(X, y, validation_split=0.05)
         joblib.dump(clf, f'{PATH_RA}/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl')
 
-    def subjectivity_verify(self):
-        print()
+    @staticmethod
+    def __subjectivity_tweet_preprocess(text, text_processor) -> str:
+        """
+        Use default tweet preprocess technique first
+        :param text:
+        :return:
+        """
+        text = ReliabilityAssessment.__tweet_preprocess(text)
+        text = emoji.demojize(text, delimiters=("", ""))
+        text = " ".join(text_processor.pre_process_doc(text))
+        text = re.sub(r'<\w*>', '', text)
+        text = re.sub(' +', ' ', text.strip())
+        text = p.clean(tweet_string=text)
+        return text
+
+    def subjectivity_verify(self, model_version: int):
+        MODEL_PATH = f'{PATH_RA}/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl'
+        assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
+
+        text_processor = TextPreProcessor(
+            # terms that will be normalized
+            normalize=['url', 'email', 'percent', 'money', 'phone', 'user', 'time', 'date', 'number'],
+            annotate=[],
+            fix_html=True,  # fix HTML tokens
+            segmenter="twitter",
+            corrector="twitter",
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+            dicts=[emoticons]
+        )
+
+        clf = joblib.load(MODEL_PATH)
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True, neural_filter=True)
+
+        infersent = self.__init_subjectivity_models(model_version)
+        infersent.build_vocab_k_words(K=1999995)
+
+        batch_size = 128
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+            tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                           tweets_collection_small]
+            print(tweets_text)
+            enc_input = self.__infersent_embeddings(infersent, tweets_text)
