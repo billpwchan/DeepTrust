@@ -12,7 +12,7 @@ import time
 from datetime import date
 from random import randint
 import preprocessor as p
-
+from nltk.tokenize import TweetTokenizer
 import emoji
 import joblib
 import nltk
@@ -1045,7 +1045,7 @@ class ReliabilityAssessment:
                                              'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
     @staticmethod
-    def __infersent_embeddings(model, batch, batch_size=128) -> list:
+    def __infersent_embeddings(model, batch, batch_size=8) -> list:
         sentences = [' '.join(s) for s in batch]
         embeddings = model.encode(sentences, bsize=batch_size, tokenize=False)
         return embeddings
@@ -1144,7 +1144,7 @@ class ReliabilityAssessment:
         joblib.dump(clf, f'{PATH_RA}/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl')
 
     @staticmethod
-    def __subjectivity_tweet_preprocess(text, text_processor) -> str:
+    def __subjectivity_tweet_preprocess(text, text_processor) -> list:
         """
         Use default tweet preprocess technique first
         :param text:
@@ -1156,6 +1156,7 @@ class ReliabilityAssessment:
         text = re.sub(r'<\w*>', '', text)
         text = re.sub(' +', ' ', text.strip())
         text = p.clean(tweet_string=text)
+        text = TweetTokenizer().tokenize(text)
         return text
 
     def subjectivity_verify(self, model_version: int):
@@ -1188,5 +1189,5 @@ class ReliabilityAssessment:
             tweets_collection_small = tweets_collection[i:i + batch_size]
             tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                            tweets_collection_small]
-            print(tweets_text)
+            print(tweets_text[0])
             enc_input = self.__infersent_embeddings(infersent, tweets_text)
