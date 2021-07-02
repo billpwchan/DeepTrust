@@ -79,12 +79,57 @@ python main.py -m RA -ad 30/04/2021 -t TWTR -rat feature-filter
 
 *(Note: Synthetic Text Filtering only apply on tweets with Feature-Filter = True)*
 
-Update `RoBERTa-based Detector`, `GLTR-BERT` and `GLTR-GPT-2` detectors results to MongoDB collection first.
+Update `RoBERTa-based Detector`, `GLTR-BERT` and `GLTR-GPT-2` detectors results to MongoDB collection first. With a
+powerful GPU (tested on 1080Ti), the total time is approximately 3 days for the TWTR example, shorter for other
+financial anomalies.
+
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update -models gpt-2 gltr-bert gltr-gpt2
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update -models roberta gltr-bert gltr-gpt2
 ```
 
+Fine-tune a GPT-2-medium generator model and generate some fake tweets for training! It may take up to 4 hours on a
+single 1080Ti GPU to fine-tune the model. The fine-tuned model is by default saved
+to `./reliability_assessment/neural_filter/gpt_generator`. WanDB is suggested for monitoring the training progress.
 
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-generate
+```
+
+Update detectors results on the generated fake tweets! These results are used for training a SVM classifier for
+classifying synthetic tweets.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake -models roberta gltr-bert gltr-gpt2
+```
+
+Train a SVM classifier and use it for generating the final decision on tweets. Also, SVM classification results should
+be updated to the tweet collection.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural_train neural_update --models svm
+```
+
+Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural_verify
+```
+
+3. **Subjectivity Analysis and Filtering**
+
+Fine-Tune InferSent model using SUBJ dataset and store the model checkpoint
+to `. /reliability_assessment/subj_filter/infersent/models`.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-train
+```
+
+Update subjectivity analysis results to the mongodb collection using the fine-tuned MLP model.
+
+```bash
+python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
+
+```
 
 ## Important Notes
 
@@ -127,7 +172,7 @@ PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP = {
 }
 ```
 
-Update ```trainer.py``` for script ```run_clm.py``` for handling NaN loss values. 
+Update ```trainer.py``` for script ```run_clm.py``` for handling NaN loss values.
 
 ```python
 training_loss = self._training_step(model, inputs, optimizer)
