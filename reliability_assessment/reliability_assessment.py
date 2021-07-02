@@ -935,9 +935,6 @@ class ReliabilityAssessment:
         infersent = self.__init_subjectivity_models(model_version)
         infersent.build_vocab_k_words(K=1999995)
 
-        self.__infersent_embeddings(infersent, [['awante']])
-        exit()
-
         clf = joblib.load(MODEL_PATH)
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                             ra_raw=False, feature_filter=True, neural_filter=True)
