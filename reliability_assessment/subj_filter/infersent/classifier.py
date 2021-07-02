@@ -14,7 +14,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import numpy as np
 import copy
-from reliability_assessment.infersent import utils
+from reliability_assessment.subj_filter.infersent import utils
 
 import torch
 from torch import nn

@@ -384,7 +384,9 @@ config.ini
 twitter_keys.yaml
 *.pt
 *.bin
-reliability_assessment/roberta_detector/models/*
-reliability_assessment/grover/models/*
-reliability_assessment/infersent/fastText/*
-reliability_assessment/infersent/GloVe/*
+*.vec
+*.txt
+reliability_assessment/neural_filter/roberta_detector/models/*
+reliability_assessment/neural_filter/grover/models/*
+reliability_assessment/subj_filter/infersent/fastText/*
+reliability_assessment/subj_filter/infersent/GloVe/*

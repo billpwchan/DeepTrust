@@ -66,7 +66,7 @@ def main():
             ra_instance.neural_fake_news_dataset_handle()
             ra_instance.neural_fake_news_generator_fine_tune(model_type='gpt2', model_name_or_path='gpt2-medium')
             ra_instance.neural_fake_news_generation(model_type='gpt2',
-                                                    model_name_or_path='./reliability_assessment/gpt_generator/')
+                                                    model_name_or_path='reliability_assessment/neural_filter/gpt_generator/')
         if 'neural-update' in args.ra_tasks:
             if 'gpt-2' in args.models:
                 ra_instance.neural_fake_news_update(gpt_2=('gpt-2' in args.models))
