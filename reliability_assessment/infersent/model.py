@@ -162,13 +162,13 @@ class InferSent(nn.Module):
         return torch.FloatTensor(embed)
 
     def tokenize(self, s):
-        from nltk.tokenize import word_tokenize
+        from nltk.tokenize import TweetTokenizer
         if self.moses_tok:
-            s = ' '.join(word_tokenize(s))
+            s = ' '.join(TweetTokenizer().tokenize(s))
             s = s.replace(" n't ", "n 't ")  # HACK to get ~MOSES tokenization
             return s.split()
         else:
-            return word_tokenize(s)
+            return TweetTokenizer().tokenize(s)
 
     def prepare_samples(self, sentences, bsize, tokenize, verbose):
         sentences = [[self.bos] + s.split() + [self.eos] if not tokenize else
