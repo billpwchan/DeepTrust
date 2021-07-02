@@ -880,10 +880,11 @@ class ReliabilityAssessment:
         """
         text = ReliabilityAssessment.__tweet_preprocess(text)
         text = emoji.demojize(text, delimiters=("", ""))
-        text = text_processor.pre_process_doc(text)
-        # text = re.sub(' +', ' ', text.strip())
-        # text = p.clean(tweet_string=text)
-        # text = TweetTokenizer().tokenize(text)
+        text = " ".join(text_processor.pre_process_doc(text))
+        # text = p.clean(tweet_string=" ".join(text))
+        text = re.sub('[^\w\s,.!?]', '', text.strip())
+        text = re.sub(' +', ' ', text)
+        text = TweetTokenizer().tokenize(text)
         return text
 
     def subjectivity_verify(self, model_version: int):
@@ -897,7 +898,7 @@ class ReliabilityAssessment:
 
         text_processor = TextPreProcessor(
             # terms that will be normalized
-            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date'],
+            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
             annotate=[],
             fix_bad_unicode=True,  # fix HTML tokens
             segmenter="twitter",
@@ -905,7 +906,8 @@ class ReliabilityAssessment:
             unpack_hashtags=True,  # perform word segmentation on hashtags
             unpack_contractions=True,  # Unpack contractions (can't -> can not)
             spell_correct_elong=False,  # spell correction for elongated words
-            tokenizer=SocialTokenizer(lowercase=False).tokenize,
+            spell_correction=True,
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
             dicts=[emoticons]
         )
         # cont = Contractions(api_key="glove-twitter-100")
@@ -915,7 +917,7 @@ class ReliabilityAssessment:
 
         clf = joblib.load(MODEL_PATH)
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True, neural_filter=True)
+                                                            ra_raw=False, feature_filter=True, neural_filter=False)
 
         batch_size = 128
         for i in trange(0, len(tweets_collection), batch_size):
