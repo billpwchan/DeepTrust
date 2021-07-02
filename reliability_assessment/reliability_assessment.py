@@ -931,7 +931,4 @@ class ReliabilityAssessment:
                                              result, self.input_date, self.ticker)
 
     def sentiment_verify(self):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-        model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-        model.to(device)
+        print("Hello")
