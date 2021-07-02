@@ -180,9 +180,8 @@ class InferSent(nn.Module):
             s_f = [word for word in sentences[i] if word in self.word_vec]
             if not s_f:
                 import warnings
-                warnings.warn('No words in "%s" (idx=%s) have w2v vectors. \
-                               Replacing by "</s>"..' % (sentences[i], i))
-                s_f = [self.eos]
+                warnings.warn('No words in "%s" (idx=%s) have w2v vectors. Replacing by Neutral token..' % (sentences[i], i))
+                s_f = ['neutral']
             sentences[i] = s_f
 
         lengths = np.array([len(s) for s in sentences])
