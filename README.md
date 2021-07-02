@@ -66,12 +66,25 @@ python main.py -m IR -t TWTR -ad 30/04/2021
 
 ### Reliability Assessment Module Examples
 
+1. **Feature-based Filtering**
+
 Feature-based filtering on the retrieved collection of tweets (e.g., Remove tweets with no public metrics -
 Retweets/Likes/Quotes). Rules can be specified in the `config.ini` under `RA.Feature.Config`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat feature-filter
 ```
+
+2. **Synthetic Text Filtering**
+
+*(Note: Synthetic Text Filtering only apply on tweets with Feature-Filter = True)*
+
+Update `RoBERTa-based Detector`, `GLTR-BERT` and `GLTR-GPT-2` detectors results to MongoDB collection first.
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update -models gpt-2 gltr-bert gltr-gpt2
+```
+
+
 
 ## Important Notes
 
