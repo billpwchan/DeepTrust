@@ -603,7 +603,8 @@ class ReliabilityAssessment:
              "--train_data_file",
              f"{PATH_RA}/neural_filter/detector_dataset/{self.ticker}_{self.input_date}_train.txt",
              "--eval_data_file", f"{PATH_RA}/neural_filter/detector_dataset/{self.ticker}_{self.input_date}_test.txt",
-             "--line_by_line", "--do_train", "--do_eval", "--output_dir", "./gpt_generator", "--overwrite_output_dir",
+             "--line_by_line", "--do_train", "--do_eval", "--output_dir",
+             f"{PATH_RA}/neural_filter/gpt_generator/{self.ticker}_{self.input_date}", "--overwrite_output_dir",
              "--per_gpu_train_batch_size", "1", "--per_gpu_eval_batch_size", "1", "--learning_rate", "5e-5",
              "--save_steps", "50000", "--logging_steps", "50", "--num_train_epochs", "1"])
 
@@ -623,6 +624,7 @@ class ReliabilityAssessment:
         :param model_type: ['gpt2', 'xlm']
         :param model_name_or_path: ['gpt2', 'gpt2-small', 'gpt2-medium', 'gpt2-xl', 'xlm-en-...']
         """
+        model_name_or_path += f"{self.ticker}_{self.input_date}/"
         self.db_instance.drop_collection(self.input_date, self.ticker, database='fake')
 
         tweets_collection = [tweet for tweet in self.db_instance.get_roberta_threshold_tweets(
