@@ -27,7 +27,7 @@ def main():
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
                         choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-update-fake',
-                                 'neural-train', 'neural-verify', 'subj-train', 'subj-verify'])
+                                 'neural-train', 'neural-verify', 'subj-train', 'subj-verify', 'sentiment-verify'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
                         choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm'])
 
@@ -94,6 +94,8 @@ def main():
             ra_instance.subjectivity_train(model_version=2)
         if 'subj-verify' in args.ra_tasks:
             ra_instance.subjectivity_verify(model_version=2)
+        if 'sentiment-verify' in args.ra_tasks:
+            ra_instance.sentiment_verify()
 
 
 if __name__ == '__main__':

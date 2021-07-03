@@ -31,6 +31,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_sp
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
 from tqdm import trange
+from transformers import AutoModelForSequenceClassification
 
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
@@ -45,14 +46,18 @@ nltk.download('punkt')
 SUB_PROCESSES = []
 
 DETECTOR_MAP = {
-    'detectors':            'gpt-2',
+    'detectors':            ['gpt-2'],
     'gpt-detector':         'detector-large.pt',
     'gltr-detector':        ('gpt2-xl', 'BERT'),
     'gpt-detector-server':  'http://localhost:8080/',
     'gltr-detector-server': ('http://localhost:5001/', 'http://localhost:5002/')
 }
 
-PATH_RA = './reliability_assessment'
+PATH_RA = Path.cwd() / 'reliability_assessment'
+
+PATH_NEURAL = PATH_RA / 'neural_filter'
+print(PATH_RA)
+
 
 class NeuralVerifier:
     def __init__(self):
@@ -63,8 +68,8 @@ class NeuralVerifier:
 
     def init_gpt_model(self, model: str = DETECTOR_MAP['gpt-detector']):
         self.default_logger.info("Initialize GPT-2 Neural Verifier")
-        gpt_2_server = subprocess.Popen(["python", f"{PATH_RA}/neural_filter/roberta_detector/server.py",
-                                         f"{PATH_RA}/neural_filter/roberta_detector/models/{model}"])
+        gpt_2_server = subprocess.Popen(["python", str(PATH_NEURAL / 'roberta_detector' / 'server.py'),
+                                         str(PATH_NEURAL / 'roberta_detector' / 'models' / model)])
         SUB_PROCESSES.append(gpt_2_server)
         while True:
             try:
@@ -81,7 +86,7 @@ class NeuralVerifier:
         default_port = DETECTOR_MAP['gltr-detector-server'][DETECTOR_MAP['gltr-detector'].index(model)][-5:-1]
         self.default_logger.info(f"Initialize GLTR {model}")
         gltr_gpt_server = subprocess.Popen(
-            ["python", f"{PATH_RA}/neural_filter/gltr/server.py", "--model", f"{model}", "--port",
+            ["python", str(PATH_NEURAL / 'gltr' / 'server.py'), "--model", model, "--port",
              f"{default_port}"])
         SUB_PROCESSES.append(gltr_gpt_server)
         while True:
@@ -94,18 +99,18 @@ class NeuralVerifier:
 
     def __download_models(self, mode: str = 'gpt-2'):
         if mode == 'gpt-2':
-            dir_prefix = f"{PATH_RA}/neural_filter/roberta_detector/models/"
-            base_model = pathlib.Path(f'{dir_prefix}detector-base.pt')
+            dir_prefix = PATH_NEURAL / 'roberta_detector' / 'models'
+            base_model = pathlib.Path(dir_prefix / 'detector-base.pt')
             if not base_model.exists():
-                open(f'{dir_prefix}detector-base.pt', 'wb').write(
+                open(str(base_model), 'wb').write(
                     requests.get(
                         'https://openaipublic.azureedge.net/gpt-2/detector-models/v1/detector-base.pt').content)
                 self.default_logger.info(f'{mode} base model downloaded')
             else:
                 self.default_logger.info(f'{mode} base model exists')
-            large_model = pathlib.Path(f'{dir_prefix}detector-large.pt')
+            large_model = pathlib.Path(dir_prefix / 'detector-large.pt')
             if not large_model.exists():
-                open(f'{dir_prefix}detector-large.pt', 'wb').write(
+                open(str(large_model), 'wb').write(
                     requests.get(
                         'https://openaipublic.azureedge.net/gpt-2/detector-models/v1/detector-large.pt').content)
                 self.default_logger.info(f'{mode} large model downloaded')
@@ -716,4 +721,5 @@ class ReliabilityAssessment:
                                              result, self.input_date, self.ticker)
 
     def sentiment_verify(self):
-        print("Hello")
+        model_path = f'{PATH_RA}/sentiment_filter/finBERT/models/sentiment'
+        model = AutoModelForSequenceClassification.from_pretrained(model_path, cache_dir=None, num_labels=3)
