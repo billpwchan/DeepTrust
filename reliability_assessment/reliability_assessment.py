@@ -56,7 +56,8 @@ DETECTOR_MAP = {
 PATH_RA = Path.cwd() / 'reliability_assessment'
 
 PATH_NEURAL = PATH_RA / 'neural_filter'
-print(PATH_RA)
+PATH_SUBJ = PATH_RA / 'subj_filter'
+PATH_SENTIMENT = PATH_RA / 'sentiment_filter'
 
 
 class NeuralVerifier:
@@ -474,7 +475,7 @@ class ReliabilityAssessment:
 
         df = pd.DataFrame(X)
         df['y'] = y
-        df.to_csv(f'{PATH_RA}/neural_filter/detector_dataset/{self.ticker}_{self.input_date}_{gltr_type}.csv')
+        df.to_csv(str(PATH_NEURAL / 'detector_dataset' / f'{self.ticker}_{self.input_date}_{gltr_type}.csv'))
 
         le = preprocessing.LabelEncoder()
         le.fit(y)
@@ -506,7 +507,7 @@ class ReliabilityAssessment:
         calibrated_clf = CalibratedClassifierCV(base_estimator=clf, cv=3, n_jobs=-1)
         calibrated_clf.fit(X, y)
         joblib.dump(calibrated_clf,
-                    f'{PATH_RA}/neural_filter/neural_classifier/{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl')
+                    str(PATH_NEURAL / 'neural_classifier' / f'{self.ticker}_{self.input_date}_{gltr_type}_svm.pkl'))
 
         # Evaluate the trained classifier for its performance
         self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
@@ -569,8 +570,8 @@ class ReliabilityAssessment:
 
     @staticmethod
     def __init_subjectivity_models(model_version: int = 2):
-        MODEL_PATH = f'{PATH_RA}/subj_filter/infersent/encoder/infersent{model_version}.pkl'
-        W2V_PATH = f'{PATH_RA}/subj_filter/infersent/fastText/crawl-300d-2M.vec' if model_version == 2 else f'{PATH_RA}/subj_filter/infersent/GloVe/glove.840B.300d.txt'
+        MODEL_PATH = PATH_SUBJ / 'infersent' / 'encoder' / f'infersent{model_version}.pkl'
+        W2V_PATH = PATH_SUBJ / 'infersent' / 'fastText' / 'crawl-300d-2M.vec' if model_version == 2 else PATH_SUBJ / 'infersent' / 'GloVe' / 'glove.840B.300d.txt'
         assert os.path.isfile(MODEL_PATH) and os.path.isfile(W2V_PATH), 'Please Set InferSent MODEL and W2V Paths'
 
         params_model = {'bsize':     64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
@@ -585,9 +586,9 @@ class ReliabilityAssessment:
         infersent = self.__init_subjectivity_models(model_version)
         infersent.build_vocab_k_words(K=1999995)
 
-        with open(f'{PATH_RA}/subj_filter/infersent/SUBJ/subj.objective', 'r', encoding='latin-1') as f:
+        with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.objective', 'r', encoding='latin-1') as f:
             obj = [line.split() for line in f.read().splitlines()]
-        with open(f'{PATH_RA}/subj_filter/infersent/SUBJ/subj.subjective', 'r', encoding='latin-1') as f:
+        with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.subjective', 'r', encoding='latin-1') as f:
             subj = [line.split() for line in f.read().splitlines()]
 
         # REMEMBER: OBJ = 1, SUB = 0
@@ -659,7 +660,7 @@ class ReliabilityAssessment:
         clf = MLP(config['classifier'], inputdim=X.shape[1], nclasses=config['nclasses'], l2reg=opt_reg,
                   seed=config['seed'])
         clf.fit(X, y, validation_split=0.05)
-        joblib.dump(clf, f'{PATH_RA}/subj_filter/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl')
+        joblib.dump(clf, PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl')
 
     @staticmethod
     def __subjectivity_tweet_preprocess(text, text_processor) -> list:
@@ -683,7 +684,7 @@ class ReliabilityAssessment:
         OBJ => 1, SUBJ => 0
         :param model_version:
         """
-        MODEL_PATH = f'{PATH_RA}/subj_filter/infersent/models/{self.ticker}_{self.input_date}_mlp.pkl'
+        MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
         assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
 
         text_processor = TextPreProcessor(
@@ -721,5 +722,5 @@ class ReliabilityAssessment:
                                              result, self.input_date, self.ticker)
 
     def sentiment_verify(self):
-        model_path = f'{PATH_RA}/sentiment_filter/finBERT/models/sentiment'
+        model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'sentiment'
         model = AutoModelForSequenceClassification.from_pretrained(model_path, cache_dir=None, num_labels=3)
