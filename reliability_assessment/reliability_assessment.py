@@ -35,6 +35,7 @@ from transformers import AutoModelForSequenceClassification
 
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
+from reliability_assessment.sentiment_filter.finBERT.model import predict
 from reliability_assessment.subj_filter.infersent.classifier import MLP
 from reliability_assessment.subj_filter.infersent.model import InferSent
 from util import *
@@ -722,5 +723,11 @@ class ReliabilityAssessment:
                                              result, self.input_date, self.ticker)
 
     def sentiment_verify(self):
-        model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'sentiment'
-        model = AutoModelForSequenceClassification.from_pretrained(model_path, cache_dir=None, num_labels=3)
+        model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'finBERT_sentiment'
+        model = AutoModelForSequenceClassification.from_pretrained(str(model_path), cache_dir=True)
+
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True, neural_filter=False)
+        for tweet in tweets_collection:
+            result = predict(tweet['text'], model)
+            print(result)
