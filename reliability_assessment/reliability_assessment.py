@@ -784,15 +784,11 @@ class ReliabilityAssessment:
                 obj = [line for line in f.read().splitlines()]
             with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.subjective', 'r', encoding='latin-1') as f:
                 subj = [line for line in f.read().splitlines()]
-            tokenizer = FullTokenizer(vocab_file=PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt')
+            tokenizer = FullTokenizer(vocab_file=str(PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt'))
             data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
             max_seq_len = data.max_seq_len
-            with open("test_x.txt", "w") as f:
-                for s in data.test_x:
-                    f.write(str(s) + "\n")
-            with open("test_y.txt", "w") as f:
-                for s in data.test_y:
-                    f.write(str(s) + "\n")
+            data1 = data.test_x
+            data2 = data.test_y
             # REMEMBER: OBJ = 1, SUB = 0
             loss, accuracy = bert_clr_lstm.evaluate(x=data.test_x, y=data.test_y, verbose=1)
             print('Model Loss: {:0.4f} | Model Accuracy: {:.4f}'.format(loss, accuracy))
