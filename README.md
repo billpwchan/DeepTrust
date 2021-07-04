@@ -44,6 +44,9 @@ To update current environment with the latest dependencies, use the following co
 conda env update --name DeepTrust --file environment.yml --prune
 ```
 
+Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+
 ## Command-line Interface Usages
 
 ### Anomaly Detection Module Examples

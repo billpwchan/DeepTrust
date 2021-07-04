@@ -780,12 +780,14 @@ class ReliabilityAssessment:
                 metrics=[tf.keras.metrics.SparseCategoricalAccuracy(name="acc")]
             )
             tokenizer = FullTokenizer(vocab_file=str(PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt'))
+
             data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
             # REMEMBER: OBJ = 1, SUB = 0
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-
+                tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                               tweets_collection_small]
             print(data.test_y)
             result = bert_clr_lstm.predict(data.test_x, verbose=1)
             print(np.argmax(result, axis=1))
