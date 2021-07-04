@@ -16,6 +16,8 @@ class WordEmbPreprocess:
             self.train_x, self.test_x = map(self._pad, [train_x, test_x])
             self.train_y = train_y
             self.test_y = test_y
+        else:
+            self.X = map(self._pad, [self.X])
 
     def _prepare(self, X: list, y: list or None):
         x = []
