@@ -29,7 +29,7 @@ def main():
                         choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-update-fake',
                                  'neural-train', 'neural-verify', 'subj-train', 'subj-verify', 'sentiment-verify'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
-                        choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm'])
+                        choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -93,7 +93,7 @@ def main():
         if 'subj-train' in args.ra_tasks:
             ra_instance.subjectivity_train(model_version=2)
         if 'subj-verify' in args.ra_tasks:
-            ra_instance.subjectivity_verify(model_version=2)
+            ra_instance.subjectivity_verify(infersent=('infersent' in args.models), model_version=2)
         if 'sentiment-verify' in args.ra_tasks:
             ra_instance.sentiment_verify()
 

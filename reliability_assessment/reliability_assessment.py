@@ -679,47 +679,50 @@ class ReliabilityAssessment:
         text = TweetTokenizer().tokenize(text)
         return text
 
-    def subjectivity_verify(self, model_version: int):
+    def subjectivity_verify(self, infersent: bool = False, model_version: int = 2):
         """
         Verify text using sentence embedding.
         OBJ => 1, SUBJ => 0
-        :param model_version:
+        :param infersent: supports ['infersent', 'textblob', 'bert-lstm']
+        :param model_version: [1, 2] for infersent
         """
-        MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
-        assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
+        if infersent:
+            MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
+            assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
 
-        text_processor = TextPreProcessor(
-            # terms that will be normalized
-            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
-            annotate=[],
-            fix_bad_unicode=True,  # fix HTML tokens
-            segmenter="twitter",
-            corrector="twitter",
-            unpack_hashtags=True,  # perform word segmentation on hashtags
-            unpack_contractions=True,  # Unpack contractions (can't -> can not)
-            spell_correct_elong=False,  # spell correction for elongated words
-            spell_correction=True,
-            tokenizer=SocialTokenizer(lowercase=True).tokenize,
-            dicts=[emoticons]
-        )
+            text_processor = TextPreProcessor(
+                # terms that will be normalized
+                omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
+                annotate=[],
+                fix_bad_unicode=True,  # fix HTML tokens
+                segmenter="twitter",
+                corrector="twitter",
+                unpack_hashtags=True,  # perform word segmentation on hashtags
+                unpack_contractions=True,  # Unpack contractions (can't -> can not)
+                spell_correct_elong=False,  # spell correction for elongated words
+                spell_correction=True,
+                tokenizer=SocialTokenizer(lowercase=True).tokenize,
+                dicts=[emoticons]
+            )
 
-        infersent = self.__init_subjectivity_models(model_version)
-        infersent.build_vocab_k_words(K=1999995)
+            infersent = self.__init_subjectivity_models(model_version)
+            infersent.build_vocab_k_words(K=1999995)
 
-        clf = joblib.load(MODEL_PATH)
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True, neural_filter=False)
+            clf = joblib.load(MODEL_PATH)
+            tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                                ra_raw=False, feature_filter=True, neural_filter=False)
 
-        batch_size = 128
-        for i in trange(0, len(tweets_collection), batch_size):
-            tweets_collection_small = tweets_collection[i:i + batch_size]
-            tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
-                           tweets_collection_small]
-            enc_input = np.vstack(self.__infersent_embeddings(infersent, tweets_text))
+            batch_size = 128
+            for i in trange(0, len(tweets_collection), batch_size):
+                tweets_collection_small = tweets_collection[i:i + batch_size]
+                tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                               tweets_collection_small]
+                enc_input = np.vstack(self.__infersent_embeddings(infersent, tweets_text))
 
-            result = [bool(output[0]) for output in clf.predict(enc_input)]
-            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small], 'ra_raw.subj-filter',
-                                             result, self.input_date, self.ticker)
+                result = [bool(output[0]) for output in clf.predict(enc_input)]
+                self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                 'ra_raw.subj-filter',
+                                                 result, self.input_date, self.ticker)
 
     def sentiment_verify(self, model='finBERT'):
         if model == 'finBERT':
@@ -750,7 +753,7 @@ class ReliabilityAssessment:
                 tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
                 # Results should be a list of dataframe
-                results = [predict(tweet, model) for tweet in tweets_text]
+                results = [predict(" ".join(tweet), model) for tweet in tweets_text]
                 output = [{
                     'sentiment_score': result.iloc[0]['sentiment_score'],
                     'prediction':      result.iloc[0]['prediction'],
