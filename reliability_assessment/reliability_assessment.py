@@ -30,6 +30,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
+from textblob import TextBlob
 from tqdm import trange
 from transformers import AutoModelForSequenceClassification
 
@@ -679,38 +680,38 @@ class ReliabilityAssessment:
         text = TweetTokenizer().tokenize(text)
         return text
 
-    def subjectivity_verify(self, infersent: bool = False, model_version: int = 2):
+    def subjectivity_verify(self, infersent: bool = False, textblob: bool = True, model_version: int = 2):
         """
         Verify text using sentence embedding.
         OBJ => 1, SUBJ => 0
         :param infersent: supports ['infersent', 'textblob', 'bert-lstm']
         :param model_version: [1, 2] for infersent
         """
+        text_processor = TextPreProcessor(
+            # terms that will be normalized
+            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
+            annotate=[],
+            fix_bad_unicode=True,  # fix HTML tokens
+            segmenter="twitter",
+            corrector="twitter",
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+            spell_correction=True,
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+            dicts=[emoticons]
+        )
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True, neural_filter=False)
+
         if infersent:
             MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
             assert os.path.isfile(MODEL_PATH), 'Please download the MLP model checkpoint'
-
-            text_processor = TextPreProcessor(
-                # terms that will be normalized
-                omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
-                annotate=[],
-                fix_bad_unicode=True,  # fix HTML tokens
-                segmenter="twitter",
-                corrector="twitter",
-                unpack_hashtags=True,  # perform word segmentation on hashtags
-                unpack_contractions=True,  # Unpack contractions (can't -> can not)
-                spell_correct_elong=False,  # spell correction for elongated words
-                spell_correction=True,
-                tokenizer=SocialTokenizer(lowercase=True).tokenize,
-                dicts=[emoticons]
-            )
 
             infersent = self.__init_subjectivity_models(model_version)
             infersent.build_vocab_k_words(K=1999995)
 
             clf = joblib.load(MODEL_PATH)
-            tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                                ra_raw=False, feature_filter=True, neural_filter=False)
 
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
@@ -724,6 +725,9 @@ class ReliabilityAssessment:
                                                  'ra_raw.subj-filter',
                                                  result, self.input_date, self.ticker)
 
+        if textblob:
+            data = TextBlob('#Habs starters vs #NHLJets: Frolik, Staal, Perry, Chiarot, Romanov, Allen. scratched: Kulak, Weber (upper-body),  Byron (lower-body), Tatar (lower-body), Price (upper-body)  @RocketSports @HabsConnection #GoHabsGo #allhabs')
+            print(data.sentiment)
     def sentiment_verify(self, model='finBERT'):
         if model == 'finBERT':
             model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'finBERT_sentiment'
