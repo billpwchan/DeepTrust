@@ -29,14 +29,19 @@ conclude the practicality of the DeepTrust framework in fulfilling its objective
 
 Open Anaconda Prompt in you computer, and type the following command to create an environment.
 
-```commandline
+```bash
 conda env create -f environment.yml
 ```
 
 To export current environment, use the following command
 
-```commandline
+```bash
 conda env export > environment.yml
+```
+
+To update current environment with the latest dependencies, use the following command
+```bash
+conda env update --name DeepTrust --file environment.yml --prune
 ```
 
 ## Command-line Interface Usages
