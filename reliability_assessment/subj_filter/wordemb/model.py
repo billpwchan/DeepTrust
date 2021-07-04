@@ -17,7 +17,9 @@ class WordEmbPreprocess:
             self.train_y = train_y
             self.test_y = test_y
         else:
-            self.X = map(self._pad, [self.X])
+            # self.X should be a nd_array of nd_arrays
+            self.max_seq_len = max_seq_len
+            self.X = self._pad(self.X)
 
     def _prepare(self, X: list, y: list or None):
         x = []

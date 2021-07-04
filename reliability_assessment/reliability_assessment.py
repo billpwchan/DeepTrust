@@ -787,6 +787,7 @@ class ReliabilityAssessment:
                 tweets_collection_small = tweets_collection[i:i + batch_size]
                 tweets_text = [" ".join(self.__subjectivity_tweet_preprocess(tweet['text'], text_processor)) for tweet in
                                tweets_collection_small]
+                # Model Checkpoints is trained using max_seq_len of 128. With fine-tuned model, this data may be changed
                 data = WordEmbPreprocess(X=tweets_text, y=None, tokenizer=tokenizer, max_seq_len=128)
                 result = [bool(output) for output in list(np.argmax(bert_clr_lstm.predict(data.X, verbose=1), axis=1))]
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],

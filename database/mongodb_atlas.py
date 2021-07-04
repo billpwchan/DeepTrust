@@ -73,7 +73,7 @@ class MongoDB:
         unselect_filed = {} if ra_raw else {'ra_raw': 0}
         if projection_override is not None:
             unselect_filed = projection_override
-        return [record for record in self.db[collection_name].find(query_field, unselect_filed).limit(5)]
+        return [record for record in self.db[collection_name].find(query_field, unselect_filed)]
 
     def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
                                       select_field=None, feature_filter: bool = True):
