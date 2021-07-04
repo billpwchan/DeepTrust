@@ -7,7 +7,7 @@ class WordEmbPreprocess:
     def __init__(self, X: list, y: list or None, tokenizer: FullTokenizer, max_seq_len=192):
         self.tokenizer = tokenizer
         self.max_seq_len = 0
-        X, y = self._prepare(X, y)
+        self.X, self.y = self._prepare(X, y)
         if y is not None:
             # Train or Eval mode
             SEED = 2000
@@ -16,10 +16,6 @@ class WordEmbPreprocess:
             self.train_x, self.test_x = map(self._pad, [train_x, test_x])
             self.train_y = train_y
             self.test_y = test_y
-        else:
-            # Prediction Mode
-            self.X = X
-            self.y = y
 
     def _prepare(self, X: list, y: list or None):
         x = []
