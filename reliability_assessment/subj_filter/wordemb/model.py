@@ -12,7 +12,7 @@ class Preprocess:
         self.max_seq_len = 0
         X, y = self._prepare(X, y)
         SEED = 2000
-        train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.1, random_state=SEED)
+        train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.005, random_state=SEED)
         self.max_seq_len = min(self.max_seq_len, max_seq_len)
         self.train_x, self.test_x = map(self._pad, [train_x, test_x])
         self.train_y = train_y

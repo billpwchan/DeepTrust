@@ -16,7 +16,6 @@ from tensorflow import keras
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
-
 import bert
 from bert import BertModelLayer
 from bert.loader import StockBertConfig, map_stock_config_to_params, load_stock_weights
@@ -734,8 +733,8 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        # tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-        #                                                     ra_raw=False, feature_filter=True, neural_filter=False)
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True, neural_filter=False)
 
         if infersent:
             MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
@@ -780,15 +779,16 @@ class ReliabilityAssessment:
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=[tf.keras.metrics.SparseCategoricalAccuracy(name="acc")]
             )
-            with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.objective', 'r', encoding='latin-1') as f:
-                obj = [line for line in f.read().splitlines()]
-            with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.subjective', 'r', encoding='latin-1') as f:
-                subj = [line for line in f.read().splitlines()]
             tokenizer = FullTokenizer(vocab_file=str(PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt'))
             data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
             # REMEMBER: OBJ = 1, SUB = 0
-            loss, accuracy = bert_clr_lstm.evaluate(x=data.test_x, y=data.test_y, verbose=1)
-            print('Model Loss: {:0.4f} | Model Accuracy: {:.4f}'.format(loss, accuracy))
+            batch_size = 128
+            for i in trange(0, len(tweets_collection), batch_size):
+                tweets_collection_small = tweets_collection[i:i + batch_size]
+
+            print(data.test_y)
+            result = bert_clr_lstm.predict(data.test_x, verbose=1)
+            print(np.argmax(result, axis=1))
 
     def __subjectivity_rules(self, infersent_output: bool, textblob_output: float):
         return infersent_output
