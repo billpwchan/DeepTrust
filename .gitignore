@@ -386,7 +386,6 @@ twitter_keys.yaml
 *.bin
 *.vec
 *.txt
-*.h5
 reliability_assessment/neural_filter/roberta_detector/models/*
 reliability_assessment/neural_filter/grover/models/*
 reliability_assessment/subj_filter/infersent/fastText/*
