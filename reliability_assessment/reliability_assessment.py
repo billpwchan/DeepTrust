@@ -786,9 +786,6 @@ class ReliabilityAssessment:
                 subj = [line for line in f.read().splitlines()]
             tokenizer = FullTokenizer(vocab_file=str(PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt'))
             data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
-            max_seq_len = data.max_seq_len
-            data1 = data.test_x
-            data2 = data.test_y
             # REMEMBER: OBJ = 1, SUB = 0
             loss, accuracy = bert_clr_lstm.evaluate(x=data.test_x, y=data.test_y, verbose=1)
             print('Model Loss: {:0.4f} | Model Accuracy: {:.4f}'.format(loss, accuracy))

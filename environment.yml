@@ -54,7 +54,6 @@ dependencies:
   - qt=5.12.9=h5909a2a_4
   - retrying=1.3.3=py37_2
   - scikit-learn-intelex=2021.2.2=py37haa95532_0
-  - scipy=1.6.2=py37h66253e8_1
   - setuptools=52.0.0=py37haa95532_0
   - soupsieve=2.2.1=pyhd3eb1b0_0
   - sqlite=3.36.0=h2bbff1b_0
@@ -107,7 +106,7 @@ dependencies:
     - flatbuffers==1.12
     - ftfy==6.0.3
     - future==0.18.2
-    - gast==0.4.0
+    - gast==0.3.3
     - gitdb==4.0.7
     - gitpython==3.1.17
     - google-api-core==1.29.0
@@ -121,7 +120,7 @@ dependencies:
     - googleapis-common-protos==1.53.0
     - grpcio==1.34.1
     - h11==0.9.0
-    - h5py==3.1.0
+    - h5py==2.10.0
     - httpcore==0.10.2
     - httpx==0.14.2
     - idna==2.10
@@ -174,6 +173,7 @@ dependencies:
     - s3transfer==0.4.2
     - sacremoses==0.0.45
     - scikit-learn==0.24.0
+    - scipy==1.4.1
     - searchtweets==1.7.6
     - sentencepiece==0.1.95
     - sentry-sdk==1.1.0
@@ -184,11 +184,11 @@ dependencies:
     - sniffio==1.2.0
     - subprocess32==3.5.4
     - swagger-ui-bundle==0.0.8
-    - tensorboard==1.14.0
+    - tensorboard==2.2.2
     - tensorboard-data-server==0.6.1
     - tensorboard-plugin-wit==1.8.0
-    - tensorflow==1.14.0
-    - tensorflow-estimator==1.14.0
+    - tensorflow==2.2.0
+    - tensorflow-estimator==2.2.0
     - termcolor==1.1.0
     - textblob==0.15.3
     - textsearch==0.0.21
@@ -210,4 +210,3 @@ dependencies:
     - yfinance==0.1.59
     - zipp==3.4.1
     - zope-interface==5.4.0
-prefix: C:\Users\billpwchan\anaconda3\envs\DeepTrust
