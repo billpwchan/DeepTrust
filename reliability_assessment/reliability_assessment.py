@@ -49,7 +49,7 @@ from reliability_assessment.neural_filter.gpt_generator.model import TweetGenera
 from reliability_assessment.sentiment_filter.finBERT.model import predict
 from reliability_assessment.subj_filter.infersent.classifier import MLP
 from reliability_assessment.subj_filter.infersent.model import InferSent
-from reliability_assessment.subj_filter.wordemb.model import Preprocess
+from reliability_assessment.subj_filter.wordemb.model import WordEmbPreprocess
 from util import *
 
 patch_sklearn()
@@ -787,7 +787,7 @@ class ReliabilityAssessment:
                 tweets_collection_small = tweets_collection[i:i + batch_size]
                 tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
-                data = Preprocess(X=tweets_text, y=None, tokenizer=tokenizer, max_seq_len=128)
+                data = WordEmbPreprocess(X=tweets_text, y=None, tokenizer=tokenizer, max_seq_len=128)
                 result = [bool(output) for output in list(np.argmax(bert_clr_lstm.predict(data.X, verbose=1), axis=1))]
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.wordemb-detector',

@@ -3,7 +3,7 @@ from bert.tokenization.bert_tokenization import FullTokenizer
 from sklearn.model_selection import train_test_split
 
 
-class Preprocess:
+class WordEmbPreprocess:
     def __init__(self, X: list, y: list or None, tokenizer: FullTokenizer, max_seq_len=192):
         self.tokenizer = tokenizer
         self.max_seq_len = 0
