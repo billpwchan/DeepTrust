@@ -12,6 +12,7 @@ import time
 from datetime import date
 from random import randint
 
+import contractions
 import emoji
 import joblib
 import nltk
@@ -617,7 +618,7 @@ class ReliabilityAssessment:
 
         config = {'nclasses':   2, 'seed': 1111,
                   'classifier': {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128, 'tenacity': 3, 'epoch_size': 2},
-                  'nhid':       0, 'k_fold': 10}
+                  'nhid':       0, 'k_fold': 5}
         X = enc_input
         y = np.array(sorted_labels)
 
@@ -672,11 +673,21 @@ class ReliabilityAssessment:
         :return:
         """
         text = ReliabilityAssessment.__tweet_preprocess(text)
+        # Fix contractions
+        text = contractions.fix(text)
+        # Remove useless 's tags
+        text = text.replace("'s", '')
+        # Convert Emoji to interpretable words
         text = emoji.demojize(text, delimiters=("", ""))
+        # Standard text preprocess defined in main function
         text = " ".join(text_processor.pre_process_doc(text))
+        # Disabled processor. May cause exception
         # text = p.clean(tweet_string=" ".join(text))
-        text = re.sub('[^\w\s,.!?]', '', text.strip())
-        text = re.sub(' +', ' ', text)
+        # Punctuations may carry subjective meanings for Infersent. Better not to remove them
+        text = re.sub("[^\w\s,.!?']", '', text.strip())
+        # Remove excessive whitespaces
+        text = re.sub(' +', ' ', text.strip())
+        # NLTK Tweet Tokenizer to split texts
         text = TweetTokenizer().tokenize(text)
         return text
 
@@ -704,11 +715,13 @@ class ReliabilityAssessment:
             unpack_contractions=True,  # Unpack contractions (can't -> can not)
             spell_correct_elong=False,  # spell correction for elongated words
             spell_correction=True,
-            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+            tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                             ra_raw=False, feature_filter=True, neural_filter=False)
+        # tweets_collection = [{
+        #     "text": "Twitter's stock price sank 15% on Friday, wiping out most of its 2021 gains https://t.co/B3cNUFKmqq"}]
 
         if infersent:
             MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
@@ -735,7 +748,6 @@ class ReliabilityAssessment:
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     textblob_futures = [executor.submit(self.subj_wrapper, tweet) for tweet in tweets_collection_small]
 
