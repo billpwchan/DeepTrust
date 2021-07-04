@@ -781,16 +781,17 @@ class ReliabilityAssessment:
             )
             tokenizer = FullTokenizer(vocab_file=str(PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt'))
 
-            data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
             # REMEMBER: OBJ = 1, SUB = 0
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
                 tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
-            print(data.test_y)
-            result = bert_clr_lstm.predict(data.test_x, verbose=1)
-            print(np.argmax(result, axis=1))
+                data = Preprocess(X=tweets_text, y=None, tokenizer=tokenizer, max_seq_len=128)
+                result = [bool(output) for output in list(np.argmax(bert_clr_lstm.predict(data.X, verbose=1), axis=1))]
+                self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                 'ra_raw.wordemb-detector',
+                                                 result, self.input_date, self.ticker)
 
     def __subjectivity_rules(self, infersent_output: bool, textblob_output: float):
         return infersent_output
