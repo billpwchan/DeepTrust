@@ -26,8 +26,11 @@ def main():
 
     # Reliability Assessment Arguments
     parser.add_argument('-rat', "--ra_tasks", nargs='+', help="Specify Reliability Assessment tasks", type=str,
-                        choices=['feature-filter', 'neural-generate', 'neural-update', 'neural-update-fake',
-                                 'neural-train', 'neural-verify', 'subj-train', 'subj-verify', 'sentiment-verify'])
+                        choices=['feature-filter',
+                                 'neural-generate', 'neural-update',
+                                 'neural-update-fake', 'neural-train', 'neural-verify',
+                                 'subj-train', 'subj-update', 'subj-verify',
+                                 'sentiment-verify'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
                         choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob'])
 
@@ -92,9 +95,11 @@ def main():
             ra_instance.neural_fake_news_verify()
         if 'subj-train' in args.ra_tasks:
             ra_instance.subjectivity_train(model_version=2)
-        if 'subj-verify' in args.ra_tasks:
-            ra_instance.subjectivity_verify(infersent=('infersent' in args.models),
+        if 'subj-update' in args.ra_tasks:
+            ra_instance.subjectivity_update(infersent=('infersent' in args.models),
                                             textblob=('textblob' in args.models), model_version=2)
+        if 'subj-verify' in args.ra_tasks:
+            ra_instance.subjectivity_verify()
         if 'sentiment-verify' in args.ra_tasks:
             ra_instance.sentiment_verify()
 

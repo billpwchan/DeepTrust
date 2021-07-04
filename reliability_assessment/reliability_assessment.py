@@ -682,9 +682,11 @@ class ReliabilityAssessment:
 
     @staticmethod
     def subj_wrapper(tweet) -> dict:
-        return {'_id': tweet['_id'], 'output': TextBlob(tweet['text']).sentiment.subjectivity}
+        textblob_obj = TextBlob(tweet['text']).sentiment
+        return {'_id':    tweet['_id'],
+                'output': {'subjectivity': textblob_obj.subjectivity, 'polarity': textblob_obj.polarity}}
 
-    def subjectivity_verify(self, infersent: bool = False, textblob: bool = True, model_version: int = 2):
+    def subjectivity_update(self, infersent: bool = False, textblob: bool = True, model_version: int = 2):
         """
         Verify text using sentence embedding.
         OBJ => 1, SUBJ => 0
@@ -741,6 +743,27 @@ class ReliabilityAssessment:
                                                  f"ra_raw.textblob-detector",
                                                  [future.result()['output'] for future in textblob_futures],
                                                  self.input_date, self.ticker)
+
+    def __subjectivity_rules(self, infersent_output: bool, textblob_output: float):
+        return infersent_output
+
+    def subjectivity_verify(self):
+        projection_field = {'ra_raw.infersent-detector':             1,
+                            'ra_raw.textblob-detector.subjectivity': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True,
+                                                            projection_override=projection_field)
+
+        batch_size = 100
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+            subj_filter = [self.__subjectivity_rules(
+                infersent_output=tweet['ra_raw']['infersent-detector'],
+                textblob_output=tweet['ra_raw']['textblob-detector']['subjectivity'])
+                for tweet in tweets_collection_small]
+
+            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                             'ra_raw.subj-filter', subj_filter, self.input_date, self.ticker)
 
     def sentiment_verify(self, model='finBERT'):
         if model == 'finBERT':
