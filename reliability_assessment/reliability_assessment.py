@@ -11,7 +11,16 @@ import subprocess
 import time
 from datetime import date
 from random import randint
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
+
+import bert
+from bert import BertModelLayer
+from bert.loader import StockBertConfig, map_stock_config_to_params, load_stock_weights
+from bert.tokenization.bert_tokenization import FullTokenizer
 import contractions
 import emoji
 import joblib
@@ -31,6 +40,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
+from tensorflow.python.client.session import InteractiveSession
 from textblob import TextBlob
 from tqdm import trange
 from transformers import AutoModelForSequenceClassification
@@ -40,12 +50,15 @@ from reliability_assessment.neural_filter.gpt_generator.model import TweetGenera
 from reliability_assessment.sentiment_filter.finBERT.model import predict
 from reliability_assessment.subj_filter.infersent.classifier import MLP
 from reliability_assessment.subj_filter.infersent.model import InferSent
+from reliability_assessment.subj_filter.wordemb.model import Preprocess
 from util import *
 
 patch_sklearn()
 gc.enable()
 nltk.download('punkt')
-
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 SUB_PROCESSES = []
 
 DETECTOR_MAP = {
@@ -670,7 +683,7 @@ class ReliabilityAssessment:
         """
         Use default tweet preprocess technique first
         :param text:
-        :return:
+        :return: a list of tokens using Tweet-specific tokenizer from NLTK
         """
         text = ReliabilityAssessment.__tweet_preprocess(text)
         # Fix contractions
@@ -697,10 +710,13 @@ class ReliabilityAssessment:
         return {'_id':    tweet['_id'],
                 'output': {'subjectivity': textblob_obj.subjectivity, 'polarity': textblob_obj.polarity}}
 
-    def subjectivity_update(self, infersent: bool = False, textblob: bool = True, model_version: int = 2):
+    def subjectivity_update(self, infersent: bool = False, textblob: bool = False, wordemb: bool = False,
+                            model_version: int = 2):
         """
         Verify text using sentence embedding.
         OBJ => 1, SUBJ => 0
+        :param wordemb:
+        :param textblob:
         :param infersent: supports ['infersent', 'textblob', 'bert-lstm']
         :param model_version: [1, 2] for infersent
         """
@@ -718,10 +734,8 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True, neural_filter=False)
-        # tweets_collection = [{
-        #     "text": "Twitter's stock price sank 15% on Friday, wiping out most of its 2021 gains https://t.co/B3cNUFKmqq"}]
+        # tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+        #                                                     ra_raw=False, feature_filter=True, neural_filter=False)
 
         if infersent:
             MODEL_PATH = PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl'
@@ -755,6 +769,33 @@ class ReliabilityAssessment:
                                                  f"ra_raw.textblob-detector",
                                                  [future.result()['output'] for future in textblob_futures],
                                                  self.input_date, self.ticker)
+        if wordemb:
+            checkpoint_path = PATH_SUBJ / 'wordemb' / 'models' / 'BERT_LSTM_CLR.h5'
+            assert os.path.isfile(checkpoint_path), "Please download BERT_LSTM_CLR.h5 checkpoint from GitHub."
+            bert_clr_lstm = tf.keras.models.load_model(checkpoint_path, compile=False,
+                                                       custom_objects={'BertModelLayer': BertModelLayer,
+                                                                       'Functional':     tf.keras.models.Model})
+            bert_clr_lstm.compile(
+                optimizer=tf.keras.optimizers.SGD(0.9),
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                metrics=[tf.keras.metrics.SparseCategoricalAccuracy(name="acc")]
+            )
+            with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.objective', 'r', encoding='latin-1') as f:
+                obj = [line for line in f.read().splitlines()]
+            with open(PATH_SUBJ / 'infersent' / 'SUBJ' / 'subj.subjective', 'r', encoding='latin-1') as f:
+                subj = [line for line in f.read().splitlines()]
+            tokenizer = FullTokenizer(vocab_file=PATH_SUBJ / 'wordemb' / 'models' / 'vocab.txt')
+            data = Preprocess(obj + subj, [1] * len(obj) + [0] * len(subj), tokenizer, max_seq_len=128)
+            max_seq_len = data.max_seq_len
+            with open("test_x.txt", "w") as f:
+                for s in data.test_x:
+                    f.write(str(s) + "\n")
+            with open("test_y.txt", "w") as f:
+                for s in data.test_y:
+                    f.write(str(s) + "\n")
+            # REMEMBER: OBJ = 1, SUB = 0
+            loss, accuracy = bert_clr_lstm.evaluate(x=data.test_x, y=data.test_y, verbose=1)
+            print('Model Loss: {:0.4f} | Model Accuracy: {:.4f}'.format(loss, accuracy))
 
     def __subjectivity_rules(self, infersent_output: bool, textblob_output: float):
         return infersent_output
