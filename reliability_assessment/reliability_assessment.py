@@ -680,6 +680,10 @@ class ReliabilityAssessment:
         text = TweetTokenizer().tokenize(text)
         return text
 
+    @staticmethod
+    def subj_wrapper(tweet) -> dict:
+        return {'_id': tweet['_id'], 'output': TextBlob(tweet['text']).sentiment.subjectivity}
+
     def subjectivity_verify(self, infersent: bool = False, textblob: bool = True, model_version: int = 2):
         """
         Verify text using sentence embedding.
@@ -722,12 +726,22 @@ class ReliabilityAssessment:
 
                 result = [bool(output[0]) for output in clf.predict(enc_input)]
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
-                                                 'ra_raw.subj-filter',
+                                                 'ra_raw.infersent-detector',
                                                  result, self.input_date, self.ticker)
 
         if textblob:
-            data = TextBlob('#Habs starters vs #NHLJets: Frolik, Staal, Perry, Chiarot, Romanov, Allen. scratched: Kulak, Weber (upper-body),  Byron (lower-body), Tatar (lower-body), Price (upper-body)  @RocketSports @HabsConnection #GoHabsGo #allhabs')
-            print(data.sentiment)
+            batch_size = 128
+            for i in trange(0, len(tweets_collection), batch_size):
+                tweets_collection_small = tweets_collection[i:i + batch_size]
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    textblob_futures = [executor.submit(self.subj_wrapper, tweet) for tweet in tweets_collection_small]
+
+                self.db_instance.update_one_bulk([future.result()['_id'] for future in textblob_futures],
+                                                 f"ra_raw.textblob-detector",
+                                                 [future.result()['output'] for future in textblob_futures],
+                                                 self.input_date, self.ticker)
+
     def sentiment_verify(self, model='finBERT'):
         if model == 'finBERT':
             model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'finBERT_sentiment'
