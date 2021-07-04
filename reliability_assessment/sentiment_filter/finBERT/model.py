@@ -593,7 +593,7 @@ def predict(text, model, write_to_csv=False, path=None):
     """
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-    sentences = sent_tokenize(text)
+    sentences = [" ".join(sent_tokenize(text))]
 
     label_list = ['positive', 'negative', 'neutral']
     label_dict = {0: 'positive', 1: 'negative', 2: 'neutral'}

@@ -18,11 +18,11 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 # Classes regarding input and data handling
 
 WEIGHTS_NAME = 'pytorch_model.bin'
 CONFIG_NAME = 'config.json'
+
 
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
@@ -163,7 +163,6 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         input_ids += padding
         attention_mask += padding
 
-
         token_type_ids += padding
 
         assert len(input_ids) == max_seq_length
@@ -184,16 +183,16 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         except:
             agree = 0
 
-        if ex_index < 1:
-            logger.info("*** Example ***")
-            logger.info("guid: %s" % (example.guid))
-            logger.info("tokens: %s" % " ".join(
-                [str(x) for x in tokens]))
-            logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-            logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
-            logger.info(
-                "token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-            logger.info("label: %s (id = %d)" % (example.label, label_id))
+        # if ex_index < 1:
+        #     logger.info("*** Example ***")
+        #     logger.info("guid: %s" % (example.guid))
+        #     logger.info("tokens: %s" % " ".join(
+        #         [str(x) for x in tokens]))
+        #     logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+        #     logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
+        #     logger.info(
+        #         "token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
+        #     logger.info("label: %s (id = %d)" % (example.label, label_id))
 
         features.append(
             InputFeatures(input_ids=input_ids,
@@ -236,8 +235,8 @@ def get_metrics(df):
 
     return {'Accuracy': accuracy,
             'Positive': {'precision': pos_precision, 'recall': pos_recall, 'f1-score': pos_f1score}, 'Negative': \
-                {'precision': neg_precision, 'recall': neg_recall, 'f1-score': neg_f1score},
-            'Neutral': {'precision': net_precision, 'recall': net_recall, 'f1-score': net_f1score}}
+                        {'precision': neg_precision, 'recall': neg_recall, 'f1-score': neg_f1score},
+            'Neutral':  {'precision': net_precision, 'recall': net_recall, 'f1-score': net_f1score}}
 
 
 def get_prediction(text, model, tokenizer):

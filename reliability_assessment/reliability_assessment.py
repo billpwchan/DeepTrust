@@ -702,7 +702,6 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=True).tokenize,
             dicts=[emoticons]
         )
-        # cont = Contractions(api_key="glove-twitter-100")
 
         infersent = self.__init_subjectivity_models(model_version)
         infersent.build_vocab_k_words(K=1999995)
@@ -722,12 +721,42 @@ class ReliabilityAssessment:
             self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small], 'ra_raw.subj-filter',
                                              result, self.input_date, self.ticker)
 
-    def sentiment_verify(self):
-        model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'finBERT_sentiment'
-        model = AutoModelForSequenceClassification.from_pretrained(str(model_path), cache_dir=True)
+    def sentiment_verify(self, model='finBERT'):
+        if model == 'finBERT':
+            model_path = PATH_SENTIMENT / 'finBERT' / 'models' / 'finBERT_sentiment'
+            model = AutoModelForSequenceClassification.from_pretrained(str(model_path), cache_dir=True)
 
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True, neural_filter=False)
-        for tweet in tweets_collection:
-            result = predict(tweet['text'], model)
-            print(result)
+            text_processor = TextPreProcessor(
+                # terms that will be normalized
+                omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
+                annotate=[],
+                fix_bad_unicode=True,  # fix HTML tokens
+                segmenter="twitter",
+                corrector="twitter",
+                unpack_hashtags=True,  # perform word segmentation on hashtags
+                unpack_contractions=True,  # Unpack contractions (can't -> can not)
+                spell_correct_elong=False,  # spell correction for elongated words
+                spell_correction=True,
+                tokenizer=SocialTokenizer(lowercase=True).tokenize,
+                dicts=[emoticons]
+            )
+
+            tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                                ra_raw=False, feature_filter=True, neural_filter=False)
+
+            batch_size = 128
+            for i in trange(0, len(tweets_collection), batch_size):
+                tweets_collection_small = tweets_collection[i:i + batch_size]
+                tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                               tweets_collection_small]
+                # Results should be a list of dataframe
+                results = [predict(tweet, model) for tweet in tweets_text]
+                output = [{
+                    'sentiment_score': result.iloc[0]['sentiment_score'],
+                    'prediction':      result.iloc[0]['prediction'],
+                    'logit':           result.iloc[0]['logic']
+                } for result in results]
+
+                self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                 'ra_raw.finBERT-detector',
+                                                 output, self.input_date, self.ticker)
