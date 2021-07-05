@@ -7,8 +7,18 @@ import time
 import numpy as np
 import requests
 
-from reliability_assessment import DETECTOR_MAP, PATH_NEURAL, SUB_PROCESSES
 from util import logger
+
+DETECTOR_MAP = {
+    'detectors':            ['gpt-2'],
+    'gpt-detector':         'detector-large.pt',
+    'gltr-detector':        ('gpt2-xl', 'BERT'),
+    'gpt-detector-server':  'http://localhost:8080/',
+    'gltr-detector-server': ('http://localhost:5001/', 'http://localhost:5002/')
+}
+SUB_PROCESSES = []
+PATH_RA = pathlib.Path.cwd() / 'reliability_assessment'
+PATH_NEURAL = PATH_RA / 'neural_filter'
 
 
 class NeuralVerifier:

@@ -8,7 +8,7 @@ import subprocess
 from datetime import date
 from random import randint
 import tensorflow as tf
-from tensorflow.compat.v1 import ConfigProto
+# from tensorflow.compat.v1 import ConfigProto
 
 from bert import BertModelLayer
 from bert.tokenization.bert_tokenization import FullTokenizer
@@ -30,14 +30,13 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
-from tensorflow.python.client.session import InteractiveSession
 from textblob import TextBlob
 from tqdm import trange
 from transformers import AutoModelForSequenceClassification
 
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
-from reliability_assessment.neural_filter.model import NeuralVerifier
+from reliability_assessment.neural_filter.model import DETECTOR_MAP, NeuralVerifier, SUB_PROCESSES
 from reliability_assessment.sentiment_filter.finBERT.model import predict
 from reliability_assessment.subj_filter.infersent.classifier import MLP
 from reliability_assessment.subj_filter.infersent.model import InferSent
@@ -47,18 +46,9 @@ from util import *
 patch_sklearn()
 gc.enable()
 nltk.download('punkt')
-config = ConfigProto()
-config.gpu_options.allow_growth = True
-session = InteractiveSession(config=config)
-SUB_PROCESSES = []
-
-DETECTOR_MAP = {
-    'detectors':            ['gpt-2'],
-    'gpt-detector':         'detector-large.pt',
-    'gltr-detector':        ('gpt2-xl', 'BERT'),
-    'gpt-detector-server':  'http://localhost:8080/',
-    'gltr-detector-server': ('http://localhost:5001/', 'http://localhost:5002/')
-}
+# config = ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = InteractiveSession(config=config)
 
 PATH_RA = Path.cwd() / 'reliability_assessment'
 
