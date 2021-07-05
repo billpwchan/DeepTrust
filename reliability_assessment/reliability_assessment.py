@@ -7,18 +7,17 @@ import re
 import subprocess
 from datetime import date
 from random import randint
-import tensorflow as tf
-# from tensorflow.compat.v1 import ConfigProto
 
-from bert import BertModelLayer
-from bert.tokenization.bert_tokenization import FullTokenizer
 import contractions
 import emoji
 import joblib
 import nltk
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 import torch
+from bert import BertModelLayer
+from bert.tokenization.bert_tokenization import FullTokenizer
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
@@ -46,9 +45,6 @@ from util import *
 patch_sklearn()
 gc.enable()
 nltk.download('punkt')
-# config = ConfigProto()
-# config.gpu_options.allow_growth = True
-# session = InteractiveSession(config=config)
 
 PATH_RA = Path.cwd() / 'reliability_assessment'
 
