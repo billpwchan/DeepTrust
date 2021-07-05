@@ -543,18 +543,17 @@ class ReliabilityAssessment:
         :param text:
         :return: a list of tokens using Tweet-specific tokenizer from NLTK
         """
+        # Remove non-ascii characters + Remove irrelevant Twitter links
         text = ReliabilityAssessment.__tweet_preprocess(text)
-        # Fix contractions
+        # Fix contractions (You're -> You are)
         text = contractions.fix(text)
-        # Remove useless 's tags
+        # Remove useless 's tags with no practical meanings
         text = text.replace("'s", '')
-        # Convert Emoji to interpretable words
+        # Convert Emoji to interpretable words (:smiley-faces)
         text = emoji.demojize(text, delimiters=("", ""))
         # Standard text preprocess defined in main function
         text = " ".join(text_processor.pre_process_doc(text))
-        # Disabled processor. May cause exception
-        # text = p.clean(tweet_string=" ".join(text))
-        # Punctuations may carry subjective meanings for Infersent. Better not to remove them
+        # Punctuations may carry subjective meanings for Infersent. Only remove functional punctuations
         text = re.sub("[^\w\s,.!?']", '', text.strip())
         # Remove excessive whitespaces
         text = re.sub(' +', ' ', text.strip())
