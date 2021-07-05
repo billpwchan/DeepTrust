@@ -1,5 +1,6 @@
 import configparser
 import json
+import os
 import sys
 import time
 from collections import Counter
@@ -184,7 +185,7 @@ class EikonAPIInterface:
         :param relevance_threshold: the minimum relevance needed for an entity to be included in the enhanced keyword list
         :return: a list of dictionaries with {'name', 'relevance', 'type'} attributes
         """
-        if len(query) == 0:
+        if len(str(query)) == 0:
             return []
         output, err = None, None
         for retry_limit in range(5):
@@ -235,6 +236,12 @@ class InformationRetrieval:
 
         # Use Refinitiv News to enhance query keywords
         # SAMPLE OUTPUT: [{'name': 'Meg Tirrell', 'relevance': 0.2, 'type': 'Person'}]
+        entity_path = Path.cwd() / 'information_retrieval' / 'news' / f'{self.ric}_entities_{self.input_date}.json'
+        if os.path.isfile(entity_path):
+            with open(str(entity_path), 'r') as fin:
+                eikon_query_entities = json.load(fin)
+            return list(eikon_query_entities)
+
         eikon_news = self.ek_instance.get_eikon_news(ric=self.ric, input_date=self.input_date)
         for news in tqdm(eikon_news):
             eikon_query_entities.extend(self.ek_instance.get_intelligent_tagging(query=news, relevance_threshold=0.5))
@@ -281,7 +288,7 @@ class InformationRetrieval:
                                                     entity_names=entity_names, directors=eikon_directors,
                                                     enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
-                                                    max_results=500)
+                                                    max_results=100)
             tw_response = self.tw_instance.tw_search(tw_query)
 
             twitter_entities = {'cashtags': [], 'annotations': [], 'hashtags': []}
@@ -318,7 +325,7 @@ class InformationRetrieval:
                                                     entity_names=entity_names, directors=eikon_directors,
                                                     enhanced_list=twitter_enhanced_list,
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
-                                                    max_results=500, next_token=next_token)
+                                                    max_results=100, next_token=next_token)
             tw_response = self.tw_instance.tw_search(tw_query)
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['data'], 'tweet')
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['includes']['users'], 'author')
