@@ -34,9 +34,8 @@ class TwitterAPIInterface:
 
     @staticmethod
     def build_query(input_date: date, market_domain: str, entity_names: list, companies: list, directors: list,
-                    ticker: str,
-                    enhanced_list: list = None, next_token: str = None, verified: bool = True, max_results: int = 10,
-                    d_days: int = 7):
+                    ticker: str, enhanced_list: list = None, next_token: str = None, verified: bool = True,
+                    max_results: int = 10, d_days: int = 7):
         """
         https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         """
