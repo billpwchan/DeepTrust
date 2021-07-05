@@ -715,9 +715,9 @@ class ReliabilityAssessment:
                 # Results should be a list of dataframe
                 results = [predict(" ".join(tweet), model, tokenizer) for tweet in tweets_text]
                 output = [{
-                    'sentiment_score': result.iloc[0]['sentiment_score'],
+                    'sentiment_score': result.iloc[0]['sentiment_score'].item(),
                     'prediction':      result.iloc[0]['prediction'],
-                    'logit':           result.iloc[0]['logit']
+                    'logit':           [np_float.item() for np_float in result.iloc[0]['logit']]
                 } for result in results]
 
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
