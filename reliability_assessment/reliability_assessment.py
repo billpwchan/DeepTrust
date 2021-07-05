@@ -31,7 +31,7 @@ from sklearn.svm import SVC
 from sklearnex import patch_sklearn
 from textblob import TextBlob
 from tqdm import trange
-from transformers import AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
@@ -707,12 +707,13 @@ class ReliabilityAssessment:
                                                                 ra_raw=False, feature_filter=True, neural_filter=False)
 
             batch_size = 128
+            tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
                 tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
                 # Results should be a list of dataframe
-                results = [predict(" ".join(tweet), model) for tweet in tweets_text]
+                results = [predict(" ".join(tweet), model, tokenizer) for tweet in tweets_text]
                 output = [{
                     'sentiment_score': result.iloc[0]['sentiment_score'],
                     'prediction':      result.iloc[0]['prediction'],

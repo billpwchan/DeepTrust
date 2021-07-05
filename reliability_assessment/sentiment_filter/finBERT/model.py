@@ -1,20 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import random
 
-import pandas as pd
-from torch.nn import MSELoss, CrossEntropyLoss
-from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-    TensorDataset)
-from tqdm import tqdm_notebook as tqdm
-from tqdm import trange
-from nltk.tokenize import sent_tokenize
-from .utils import *
 import numpy as np
-import logging
-
-from transformers.optimization import AdamW, get_linear_schedule_with_warmup
+import pandas as pd
+from nltk.tokenize import sent_tokenize
+from torch.nn import CrossEntropyLoss, MSELoss
+from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
+                              TensorDataset)
+from tqdm import tqdm_notebook as tqdm, trange
 from transformers import AutoTokenizer
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
+
+from .utils import *
 
 logger = logging.getLogger(__name__)
 
@@ -227,42 +226,43 @@ class FinBert(object):
             encoder_params = []
             for i in range(12):
                 encoder_decay = {
-                    'params': [p for n, p in list(model.bert.encoder.layer[i].named_parameters()) if
-                               not any(nd in n for nd in no_decay)],
+                    'params':       [p for n, p in list(model.bert.encoder.layer[i].named_parameters()) if
+                                     not any(nd in n for nd in no_decay)],
                     'weight_decay': 0.01,
-                    'lr': lr / (dft_rate ** (12 - i))}
+                    'lr':           lr / (dft_rate ** (12 - i))}
                 encoder_nodecay = {
-                    'params': [p for n, p in list(model.bert.encoder.layer[i].named_parameters()) if
-                               any(nd in n for nd in no_decay)],
+                    'params':       [p for n, p in list(model.bert.encoder.layer[i].named_parameters()) if
+                                     any(nd in n for nd in no_decay)],
                     'weight_decay': 0.0,
-                    'lr': lr / (dft_rate ** (12 - i))}
+                    'lr':           lr / (dft_rate ** (12 - i))}
                 encoder_params.append(encoder_decay)
                 encoder_params.append(encoder_nodecay)
 
             optimizer_grouped_parameters = [
-                {'params': [p for n, p in list(model.bert.embeddings.named_parameters()) if
-                            not any(nd in n for nd in no_decay)],
+                {'params':       [p for n, p in list(model.bert.embeddings.named_parameters()) if
+                                  not any(nd in n for nd in no_decay)],
                  'weight_decay': 0.01,
-                 'lr': lr / (dft_rate ** 13)},
-                {'params': [p for n, p in list(model.bert.embeddings.named_parameters()) if
-                            any(nd in n for nd in no_decay)],
+                 'lr':           lr / (dft_rate ** 13)},
+                {'params':       [p for n, p in list(model.bert.embeddings.named_parameters()) if
+                                  any(nd in n for nd in no_decay)],
                  'weight_decay': 0.0,
-                 'lr': lr / (dft_rate ** 13)},
-                {'params': [p for n, p in list(model.bert.pooler.named_parameters()) if
-                            not any(nd in n for nd in no_decay)],
+                 'lr':           lr / (dft_rate ** 13)},
+                {'params':       [p for n, p in list(model.bert.pooler.named_parameters()) if
+                                  not any(nd in n for nd in no_decay)],
                  'weight_decay': 0.01,
-                 'lr': lr},
-                {'params': [p for n, p in list(model.bert.pooler.named_parameters()) if
-                            any(nd in n for nd in no_decay)],
+                 'lr':           lr},
+                {'params':       [p for n, p in list(model.bert.pooler.named_parameters()) if
+                                  any(nd in n for nd in no_decay)],
                  'weight_decay': 0.0,
-                 'lr': lr},
-                {'params': [p for n, p in list(model.classifier.named_parameters()) if
-                            not any(nd in n for nd in no_decay)],
+                 'lr':           lr},
+                {'params':       [p for n, p in list(model.classifier.named_parameters()) if
+                                  not any(nd in n for nd in no_decay)],
                  'weight_decay': 0.01,
-                 'lr': lr},
-                {'params': [p for n, p in list(model.classifier.named_parameters()) if any(nd in n for nd in no_decay)],
+                 'lr':           lr},
+                {'params':       [p for n, p in list(model.classifier.named_parameters()) if
+                                  any(nd in n for nd in no_decay)],
                  'weight_decay': 0.0,
-                 'lr': lr}]
+                 'lr':           lr}]
 
             optimizer_grouped_parameters.extend(encoder_params)
 
@@ -271,23 +271,22 @@ class FinBert(object):
             param_optimizer = list(model.named_parameters())
 
             optimizer_grouped_parameters = [
-                {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+                {'params':       [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
                  'weight_decay': 0.01},
                 {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
             ]
 
         schedule = "warmup_linear"
 
-
         self.num_warmup_steps = int(float(self.num_train_optimization_steps) * self.config.warm_up_proportion)
 
         self.optimizer = AdamW(optimizer_grouped_parameters,
-                          lr=self.config.learning_rate,
-                          correct_bias=False)
+                               lr=self.config.learning_rate,
+                               correct_bias=False)
 
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer,
-                                                    num_warmup_steps=self.num_warmup_steps,
-                                                    num_training_steps=self.num_train_optimization_steps)
+                                                         num_warmup_steps=self.num_warmup_steps,
+                                                         num_training_steps=self.num_train_optimization_steps)
 
         return model
 
@@ -446,7 +445,8 @@ class FinBert(object):
             valid_loss, valid_accuracy = 0, 0
             nb_valid_steps, nb_valid_examples = 0, 0
 
-            for input_ids, attention_mask, token_type_ids, label_ids, agree_ids in tqdm(validation_loader, desc="Validating"):
+            for input_ids, attention_mask, token_type_ids, label_ids, agree_ids in tqdm(validation_loader,
+                                                                                        desc="Validating"):
                 input_ids = input_ids.to(self.device)
                 attention_mask = attention_mask.to(self.device)
                 token_type_ids = token_type_ids.to(self.device)
@@ -577,7 +577,7 @@ class FinBert(object):
         return evaluation_df
 
 
-def predict(text, model, write_to_csv=False, path=None):
+def predict(text, model, tokenizer, write_to_csv=False, path=None):
     """
     Predict sentiments of sentences in a given text. The function first tokenizes sentences, make predictions and write
     results.
@@ -592,7 +592,7 @@ def predict(text, model, write_to_csv=False, path=None):
         path to write the string
     """
     model.eval()
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
     sentences = [" ".join(sent_tokenize(text))]
 
     label_list = ['positive', 'negative', 'neutral']
@@ -614,9 +614,9 @@ def predict(text, model, write_to_csv=False, path=None):
             sentiment_score = pd.Series(logits[:, 0] - logits[:, 1])
             predictions = np.squeeze(np.argmax(logits, axis=1))
 
-            batch_result = {'sentence': batch,
-                            'logit': list(logits),
-                            'prediction': predictions,
+            batch_result = {'sentence':        batch,
+                            'logit':           list(logits),
+                            'prediction':      predictions,
                             'sentiment_score': sentiment_score}
 
             batch_result = pd.DataFrame(batch_result)
