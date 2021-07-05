@@ -717,7 +717,7 @@ class ReliabilityAssessment:
                 output = [{
                     'sentiment_score': result.iloc[0]['sentiment_score'],
                     'prediction':      result.iloc[0]['prediction'],
-                    'logit':           result.iloc[0]['logic']
+                    'logit':           result.iloc[0]['logit']
                 } for result in results]
 
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
