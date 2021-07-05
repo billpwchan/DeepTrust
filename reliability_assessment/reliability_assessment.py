@@ -785,7 +785,8 @@ class ReliabilityAssessment:
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-                tweets_text = [" ".join(self.__subjectivity_tweet_preprocess(tweet['text'], text_processor)) for tweet in
+                tweets_text = [" ".join(self.__subjectivity_tweet_preprocess(tweet['text'], text_processor)) for tweet
+                               in
                                tweets_collection_small]
                 # Model Checkpoints is trained using max_seq_len of 128. With fine-tuned model, this data may be changed
                 data = WordEmbPreprocess(X=tweets_text, y=None, tokenizer=tokenizer, max_seq_len=128)
@@ -794,12 +795,15 @@ class ReliabilityAssessment:
                                                  'ra_raw.wordemb-detector',
                                                  result, self.input_date, self.ticker)
 
-    def __subjectivity_rules(self, infersent_output: bool, textblob_output: float):
-        return infersent_output
+    def __subjectivity_rules(self, infersent_output: bool, textblob_output: float, wordemb_output: bool) -> bool:
+        if infersent_output and wordemb_output:
+            return True
+        return False
 
     def subjectivity_verify(self):
         projection_field = {'ra_raw.infersent-detector':             1,
-                            'ra_raw.textblob-detector.subjectivity': 1}
+                            'ra_raw.textblob-detector.subjectivity': 1,
+                            'ra_raw.wordemb-detector':               1}
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                             ra_raw=False, feature_filter=True,
                                                             projection_override=projection_field)
@@ -809,7 +813,8 @@ class ReliabilityAssessment:
             tweets_collection_small = tweets_collection[i:i + batch_size]
             subj_filter = [self.__subjectivity_rules(
                 infersent_output=tweet['ra_raw']['infersent-detector'],
-                textblob_output=tweet['ra_raw']['textblob-detector']['subjectivity'])
+                textblob_output=tweet['ra_raw']['textblob-detector']['subjectivity'],
+                wordemb_output=tweet['ra_raw']['wordemb-detector'])
                 for tweet in tweets_collection_small]
 
             self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
