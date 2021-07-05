@@ -671,6 +671,11 @@ class ReliabilityAssessment:
     def __subjectivity_rules(self, infersent_output: bool, textblob_output: float, wordemb_output: bool) -> bool:
         if infersent_output and wordemb_output:
             return True
+        elif infersent_output != wordemb_output:
+            # If textblob_output < 0.5, then it is concluded as objective to break the tie between infersent and wordemb
+            # If textblob == 0, ignore the results because it is likely the tokenizer from NLTK doesn't work
+            return 0 < textblob_output < self.config.getfloat('RA.Subj.Config', 'textblob_threshold')
+        # Both infersent and wordemb models output subjective, concluded as subjective.
         return False
 
     def subjectivity_verify(self):
