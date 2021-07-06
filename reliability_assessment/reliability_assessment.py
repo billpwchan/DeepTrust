@@ -155,7 +155,7 @@ class ReliabilityAssessment:
         if roberta:
             self.nv_instance.init_gpt_model(model=DETECTOR_MAP['gpt-detector'])
             # Split large tweets collection into smaller pieces -> GOOD FOR LAPTOP :)
-            batch_size = 10  # Good for 1080 Ti
+            batch_size = 30  # Good for 1080 Ti
             if fake:
                 gpt_collection = \
                     self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
