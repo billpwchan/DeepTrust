@@ -114,13 +114,13 @@ Train a SVM classifier and use it for generating the final decision on tweets. A
 be updated to the tweet collection.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural_train neural_update --models svm
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train neural-update --models svm
 ```
 
 Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural_verify
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-verify
 ```
 
 3. **Subjectivity Analysis and Filtering**
@@ -130,6 +130,11 @@ to `. /reliability_assessment/subj_filter/infersent/models`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-train
+```
+
+Update `InferSent`, `WordEmb` and `TextBlob` evaluation results to the Mongo collection.
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat subj-update --models infersent wordemb textblob
 ```
 
 Update subjectivity analysis results to the mongodb collection using the fine-tuned MLP model.
