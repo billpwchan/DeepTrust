@@ -731,10 +731,10 @@ class ReliabilityAssessment:
                                                             projection_override=projection_field)
         label_dataset = []
         for tweet in tweets_collection:
-            if "twitter" in tweet['text'].lower() and "price" in tweet['text'].lower() and \
-                    "label" not in tweet['ra_raw']:
+            if "$TWTR" in tweet['text'] and "label" not in tweet['ra_raw']:
                 label_dataset.append({"_id": tweet['_id'], "text": tweet['text']})
+        self.default_logger.info(f"Remaining Tweets: {len(label_dataset)}")
 
         for tweet in label_dataset:
-            self.db_instance.update_one(tweet['_id'], 'ra_raw.label', input(f'{tweet["text"]}').lower() == "y",
+            self.db_instance.update_one(tweet['_id'], 'ra_raw.label', input(f'{tweet["text"]}:  ').lower() == "y",
                                         self.input_date, self.ticker)
