@@ -735,4 +735,6 @@ class ReliabilityAssessment:
                     "label" not in tweet['ra_raw']:
                 label_dataset.append({"_id": tweet['_id'], "text": tweet['text']})
 
-        print(len(label_dataset))
+        for tweet in label_dataset:
+            self.db_instance.update_one(tweet['_id'], 'ra_raw.label', input(f'{tweet["text"]}').lower() == "y",
+                                        self.input_date, self.ticker)
