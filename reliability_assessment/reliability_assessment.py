@@ -723,3 +723,16 @@ class ReliabilityAssessment:
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.finBERT-detector',
                                                  output, self.input_date, self.ticker)
+
+    def tweet_label(self):
+        projection_field = {'text': 1, 'ra_raw.label': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=False,
+                                                            projection_override=projection_field)
+        label_dataset = []
+        for tweet in tweets_collection:
+            if "twitter" in tweet['text'].lower() and "price" in tweet['text'].lower() and \
+                    "label" not in tweet['ra_raw']:
+                label_dataset.append({"_id": tweet['_id'], "text": tweet['text']})
+
+        print(len(label_dataset))

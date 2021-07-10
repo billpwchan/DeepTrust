@@ -30,7 +30,7 @@ def main():
                                  'neural-generate', 'neural-update',
                                  'neural-update-fake', 'neural-train', 'neural-verify',
                                  'subj-train', 'subj-update', 'subj-verify',
-                                 'sentiment-verify'])
+                                 'sentiment-verify', 'label'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
                         choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob', 'wordemb'])
 
@@ -103,6 +103,8 @@ def main():
             ra_instance.subjectivity_verify()
         if 'sentiment-verify' in args.ra_tasks:
             ra_instance.sentiment_verify()
+        if 'label' in args.ra_tasks:
+            ra_instance.tweet_label()
 
 
 if __name__ == '__main__':
