@@ -119,12 +119,12 @@ class MongoDB:
 
     def update_all(self, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        result = self.db[collection_name].update_many({}, {'$set': {field: entry}}, upsert=True)
+        result = self.db[collection_name].update_many({}, {'$set': {field: entry}})
         self.default_logger.info(f'Update {result.modified_count} records in {collection_name}')
 
     def update_one(self, ref, field, entry, input_date: date, ticker: str, database: str = 'tweet'):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
-        result = self.db[collection_name].update_one({'_id': ref}, {'$set': {field: entry}}, upsert=True)
+        result = self.db[collection_name].update_one({'_id': ref}, {'$set': {field: entry}})
         self.default_logger.info(f'Update {result.modified_count} records in {collection_name}')
 
     def update_one_bulk(self, ref_list: list, field, entry_list: list, input_date: date, ticker: str,
@@ -132,7 +132,7 @@ class MongoDB:
         assert len(ref_list) == len(entry_list)
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         operations = [
-            UpdateOne({ref_field: ref}, {'$set': {field: entry}}, upsert=True) for ref, entry in
+            UpdateOne({ref_field: ref}, {'$set': {field: entry}}) for ref, entry in
             zip(ref_list, entry_list)
         ]
         result = self.db[collection_name].bulk_write(operations)

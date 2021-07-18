@@ -130,9 +130,13 @@ class ReliabilityAssessment:
         # self.db_instance.duplicate_collection(self.input_date, self.ticker, source='tweet', target='tweet_dump')
 
         # DON"T USE MONGO AGGREGATION. PYTHON IS MORE ROBUST
+        projection_field = {'text': 1, 'author_id': 1, 'public_metrics': 1, 'possibly_sensitive': 1}
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False)
+                                                            ra_raw=False, feature_filter=False,
+                                                            projection_override=projection_field)
+        self.default_logger.info(f"Tweet Collection: {len(tweets_collection)}")
         authors_collection = self.db_instance.get_all_authors(self.input_date, self.ticker, database='author')
+        self.default_logger.info(f"Author Collection: {len(authors_collection)}")
 
         # Initialize Feature Records
         self.db_instance.update_all('ra_raw.feature-filter', False, self.input_date, self.ticker)
@@ -749,6 +753,7 @@ class ReliabilityAssessment:
                          'ra_raw' not in record or 'label' not in record['ra_raw']]
         self.default_logger.info(f"Remaining Tweets: {len(label_dataset)}")
 
+        label_dataset = sorted(label_dataset, key=lambda k: k['text'])
         for tweet in label_dataset:
             self.db_instance.update_one(tweet['_id'], 'ra_raw.label', input(f'{tweet["text"]}:  ').lower() == "y",
                                         self.input_date, self.ticker)
