@@ -609,7 +609,6 @@ def predict(text, model, tokenizer, write_to_csv=False, path=None):
 
         with torch.no_grad():
             logits = model(all_input_ids, all_attention_mask, all_token_type_ids)[0]
-            logging.info(logits)
             logits = softmax(np.array(logits))
             sentiment_score = pd.Series(logits[:, 0] - logits[:, 1])
             predictions = np.squeeze(np.argmax(logits, axis=1))
