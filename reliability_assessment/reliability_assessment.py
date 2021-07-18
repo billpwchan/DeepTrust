@@ -30,7 +30,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_sp
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
 from textblob import TextBlob
-from tqdm import trange
+from tqdm import tqdm, trange
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from database.mongodb_atlas import MongoDB
@@ -140,7 +140,7 @@ class ReliabilityAssessment:
         # Append a field in the ra_raw.feature-filter
         authors_collection[:] = [author for author in authors_collection if self.__author_feature_rules(author)]
         authors_id = [author['id'] for author in authors_collection]
-        tweets_collection[:] = [tweet for tweet in tweets_collection if
+        tweets_collection[:] = [tweet for tweet in tqdm(tweets_collection) if
                                 self.__tweet_feature_rules(tweet) and tweet['author_id'] in authors_id]
 
         self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection], 'ra_raw.feature-filter',
@@ -730,6 +730,7 @@ class ReliabilityAssessment:
 
     def tweet_label(self):
         stock_name = "twitter" if self.ticker == 'TWTR' else "facebook"
+        # case-insensitive search.
         query_field = {"$or": [
             {"text": {"$regex": f".*\${self.ticker}.*", "$options": "i"}},
             {"$and": [
