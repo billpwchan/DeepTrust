@@ -79,6 +79,10 @@ class ReliabilityAssessment:
         :param tweet:
         :return: bool
         """
+        # For tweets that contain 20 or more cashtags, it is almost certain to be spam messages or stock updates.
+        if len(re.findall(r'\$\w+', tweet['text'])) >= self.config.getint('RA.Feature.Config', 'max_tweet_cashtags'):
+            return False
+
         # Need to have at least some interactions with the network
         public_metrics = tweet['public_metrics']
         if (public_metrics['retweet_count'] > self.config.getint('RA.Feature.Config', 'min_tweet_retweet') or
