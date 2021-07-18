@@ -141,10 +141,14 @@ class ReliabilityAssessment:
         authors_collection[:] = [author for author in authors_collection if self.__author_feature_rules(author)]
         authors_id = [author['id'] for author in authors_collection]
         tweets_collection[:] = [tweet for tweet in tqdm(tweets_collection) if
-                                self.__tweet_feature_rules(tweet) and tweet['author_id'] in authors_id]
+                                tweet['author_id'] in authors_id and self.__tweet_feature_rules(tweet)]
 
-        self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection], 'ra_raw.feature-filter',
-                                         [True for _ in range(len(tweets_collection))], self.input_date, self.ticker)
+        batch_size = 60
+        for i in trange(0, len(tweets_collection), batch_size):
+            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection[i:i + batch_size]],
+                                             'ra_raw.feature-filter',
+                                             [True for _ in range(len(tweets_collection[i:i + batch_size]))],
+                                             self.input_date, self.ticker)
 
     def detector_wrapper(self, tweet, mode):
         tweet_text = self.__tweet_preprocess(tweet['text'])
