@@ -22,15 +22,10 @@ class MongoDB:
     def create_collections(self, input_date: date, ticker: str):
         collist = self.db.list_collection_names()
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
-        if f'{collection_prefix}_tweet' in collist:
-            self.default_logger.warning(f'{collection_prefix}_tweet collection already exists.')
-            if input("Delete? (Y/N) ") == "Y":
-                self.db[f'{collection_prefix}_tweet'].drop()
-
-        if f'{collection_prefix}_author' in collist:
-            self.default_logger.warning(f'{collection_prefix}_author collection already exists.')
-            if input("Delete? (Y/N) ") == "Y":
-                self.db[f'{collection_prefix}_author'].drop()
+        for database in ['tweet', 'author']:
+            if f'{collection_prefix}_{database}' in collist:
+                self.default_logger.warning(f'{collection_prefix}_{database} collection already exists.')
+                self.drop_collection(input_date, ticker, database='tweet')
 
         # Ensure Unique Index
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
@@ -41,8 +36,7 @@ class MongoDB:
         collection_prefix = f'{ticker}_{input_date.strftime("%Y-%m-%d")}'
         if f'{collection_prefix}_{target}' in collist:
             self.default_logger.warning(f'{collection_prefix}_{target} collection already exists.')
-            if input("Delete? (Y/N) ") == "Y":
-                self.db[f'{collection_prefix}_{target}'].drop()
+            self.drop_collection(input_date, ticker, database=target)
         collist = self.db.list_collection_names()
         if f'{collection_prefix}_{target}' not in collist:
             # Duplicate the tweet database to a clean one for referencing later.
