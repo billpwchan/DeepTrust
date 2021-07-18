@@ -123,6 +123,7 @@ dependencies:
     - h5py==2.10.0
     - httpcore==0.10.2
     - httpx==0.14.2
+    - huggingface-hub==0.0.12
     - idna==2.10
     - importlib-metadata==4.5.0
     - inflection==0.5.1
@@ -207,6 +208,6 @@ dependencies:
     - websocket-client==0.57.0
     - werkzeug==2.0.1
     - wrapt==1.12.1
-    - yfinance==0.1.59
+    - yfinance==0.1.63
     - zipp==3.4.1
     - zope-interface==5.4.0

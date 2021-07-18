@@ -134,7 +134,7 @@ class AnomalyDetection:
 
             classify_df = AnomalyDetection.__detect_classify_anomalies(predicted_df, 7)
             classify_df.reset_index(inplace=True, drop=True)
-            classify_df.drop(classify_df.tail(7).index, inplace=True)
+            classify_df.drop(classify_df.tail(6).index, inplace=True)
             output_data = classify_df[classify_df['anomaly_points'].notnull()]
             output_data.to_csv(f'./anomaly_detection/reports/{self.ticker}_arima_anomalies_{start_date}_{end_date}.csv')
         elif self.mode == 'lof' or self.mode == 'if':
