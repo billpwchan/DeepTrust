@@ -729,17 +729,19 @@ class ReliabilityAssessment:
                                                  output, self.input_date, self.ticker)
 
     def tweet_label(self):
-        projection_field = {'text': 1, 'ra_raw.label': 1}
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False,
-                                                            projection_override=projection_field)
-        label_dataset = []
-        for tweet in tweets_collection:
-            if ("$TWTR" in tweet['text'] or
-                ("twitter" in tweet['text'].lower() and "stock" in tweet['text'].lower() and "price" in tweet[
-                    'text'].lower())) \
-                    and "label" not in tweet['ra_raw']:
-                label_dataset.append({"_id": tweet['_id'], "text": tweet['text']})
+        stock_name = "twitter" if self.ticker == 'TWTR' else "facebook"
+        query_field = {"$or": [
+            {"text": {"$regex": f".*\${self.ticker}.*", "$options": "i"}},
+            {"$and": [
+                {"text": {"$regex": f".*{stock_name}.*", "$options": "i"}},
+                {"text": {"$regex": ".*stock.*", "$options": "i"}},
+                {"text": {"$regex": ".*price.*", "$options": "i"}}
+            ]}
+        ]}
+        label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker)
+        self.default_logger.info(f"Total Tweets: {len(label_dataset)}")
+        label_dataset = [record for record in label_dataset if
+                         'ra_raw' not in record or 'label' not in record['ra_raw']]
         self.default_logger.info(f"Remaining Tweets: {len(label_dataset)}")
 
         for tweet in label_dataset:
