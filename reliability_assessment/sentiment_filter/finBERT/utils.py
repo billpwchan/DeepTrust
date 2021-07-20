@@ -146,8 +146,6 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     features = []
     for (ex_index, example) in enumerate(examples):
         tokens = tokenizer.tokenize(example.text)
-        with open('TWTR.txt', 'a') as the_file:
-            the_file.write(f'{len(tokens)}\n')
         if len(tokens) > max_seq_length - 2:
             tokens = tokens[:(max_seq_length // 4) - 1] + tokens[
                                                           len(tokens) - (3 * max_seq_length // 4) + 1:]
