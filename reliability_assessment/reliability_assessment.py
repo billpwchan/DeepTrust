@@ -737,13 +737,6 @@ class ReliabilityAssessment:
                                                  output, self.input_date, self.ticker)
 
     def tweet_label(self):
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False, neural_filter=False)
-        for tweet in tweets_collection:
-            with open('somefile.txt', 'a') as the_file:
-                the_file.write(str(len(re.findall(r'[$#]\w+', tweet['text']))))
-        exit(0)
-
         stock_name = "twitter" if self.ticker == 'TWTR' else "facebook"
         # case-insensitive search.
         query_field = {"$or": [
