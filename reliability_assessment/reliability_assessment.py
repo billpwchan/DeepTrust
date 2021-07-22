@@ -788,4 +788,13 @@ class ReliabilityAssessment:
                                                               projection_override=projection_filed)
 
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
-        print(eval_df)
+
+        eval_dict = {
+            'feature':             eval_df['feature-filter'],
+            'feature+neural':      eval_df['feature-filter'] & eval_df['neural-filter'],
+            'feature+neural+subj': eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['subj-filter']
+        }
+        for key, value in eval_dict.items():
+            report = classification_report(eval_df['label'], value, output_dict=True)
+            df = pd.DataFrame(report).transpose().to_csv(
+                Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
