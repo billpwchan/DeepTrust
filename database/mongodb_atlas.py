@@ -93,10 +93,11 @@ class MongoDB:
             unselect_filed = gltr
         return [record for record in self.db[collection_name].find(query, unselect_filed)]
 
-    def get_annotated_tweets(self, query_field: dict, input_date: date, ticker: str, database: str = 'tweet'):
+    def get_annotated_tweets(self, query_field: dict, input_date: date, ticker: str, database: str = 'tweet',
+                             projection_override: dict = None):
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
         self.default_logger.info(f'Retrieve annotation records from database {collection_name}')
-        projection_filed = {'text': 1, 'ra_raw.label': 1}
+        projection_filed = {'text': 1, 'ra_raw.label': 1} if projection_override is None else projection_override
         return [record for record in self.db[collection_name].find(query_field, projection_filed)]
 
     def get_all_authors(self, input_date: date, ticker: str, database: str = 'author'):

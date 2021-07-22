@@ -80,7 +80,8 @@ class ReliabilityAssessment:
         :return: bool
         """
         # For tweets that contain 20 or more cashtags, it is almost certain to be spam messages or stock updates.
-        if len(re.findall(r'[$#][a-zA-Z]+', tweet['text'])) >= self.config.getint('RA.Feature.Config', 'max_tweet_tags'):
+        if len(re.findall(r'[$#][a-zA-Z]+', tweet['text'])) >= self.config.getint('RA.Feature.Config',
+                                                                                  'max_tweet_tags'):
             return False
 
         # Need to have at least some interactions with the network
@@ -736,31 +737,37 @@ class ReliabilityAssessment:
                                                  'ra_raw.finBERT-detector',
                                                  output, self.input_date, self.ticker)
 
-    def tweet_label(self):
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=False, neural_filter=False)
-        output_tags = []
-        for tweet in tweets_collection:
-            matches = re.findall(r'[$#][a-zA-Z]+', tweet['text'])
-            if len(matches) > 10:
-                output_tags.append(matches)
-
-        with open(f"{self.ticker}_tags_pie.csv", "w", encoding="utf-8") as f:
-            for record in output_tags:
-                for item in record:
-                    f.write(f'{item}\n')
-
-        exit(0)
-        stock_name = "twitter" if self.ticker == 'TWTR' else "facebook"
+    @staticmethod
+    def __annotation_query(ticker) -> dict:
+        stock_name = "twitter" if ticker == 'TWTR' else "facebook"
         # case-insensitive search.
         query_field = {"$or": [
-            {"text": {"$regex": f".*\${self.ticker}.*", "$options": "i"}},
+            {"text": {"$regex": f".*\${ticker}.*", "$options": "i"}},
             {"$and": [
                 {"text": {"$regex": f".*{stock_name}.*", "$options": "i"}},
                 {"text": {"$regex": ".*stock.*", "$options": "i"}},
                 {"text": {"$regex": ".*price.*", "$options": "i"}}
             ]}
         ]}
+        return query_field
+
+    def tweet_label(self):
+        # tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+        #                                                     ra_raw=False, feature_filter=False, neural_filter=False)
+        # output_tags = []
+        # for tweet in tweets_collection:
+        #     matches = re.findall(r'[$#][a-zA-Z]+', tweet['text'])
+        #     if len(matches) > 10:
+        #         output_tags.append(matches)
+        #
+        # with open(f"{self.ticker}_tags_pie.csv", "w", encoding="utf-8") as f:
+        #     for record in output_tags:
+        #         for item in record:
+        #             f.write(f'{item}\n')
+        #
+        # exit(0)
+
+        query_field = self.__annotation_query(self.ticker)
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker)
         self.default_logger.info(f"Total Tweets: {len(label_dataset)}")
         label_dataset = [record for record in label_dataset if
@@ -771,3 +778,15 @@ class ReliabilityAssessment:
         for tweet in label_dataset:
             self.db_instance.update_one(tweet['_id'], 'ra_raw.label', input(f'{tweet["text"]}:  ').lower() == "y",
                                         self.input_date, self.ticker)
+
+    def tweet_eval(self):
+        query_field = self.__annotation_query(self.ticker)
+        projection_filed = {'ra_raw.label':          1,
+                            'ra_raw.feature-filter': 1,
+                            'ra_raw.neural_filter':  1,
+                            'ra_raw.subj_filter':    1,
+                            }
+        label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+                                                              projection_override=projection_filed)
+
+        print(label_dataset[0])
