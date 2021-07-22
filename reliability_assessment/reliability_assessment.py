@@ -741,7 +741,7 @@ class ReliabilityAssessment:
                                                             ra_raw=False, feature_filter=False, neural_filter=False)
         output_tags = []
         for tweet in tweets_collection:
-            matches = re.findall(r'[$#]\w+', tweet['text'])
+            matches = re.findall(r'[$#][a-zA-Z]+', tweet['text'])
             if len(matches) > 10:
                 output_tags.append(matches)
 
