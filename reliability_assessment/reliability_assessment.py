@@ -80,7 +80,7 @@ class ReliabilityAssessment:
         :return: bool
         """
         # For tweets that contain 20 or more cashtags, it is almost certain to be spam messages or stock updates.
-        if len(re.findall(r'[$#]\w+', tweet['text'])) >= self.config.getint('RA.Feature.Config', 'max_tweet_tags'):
+        if len(re.findall(r'[$#][a-zA-Z]+', tweet['text'])) >= self.config.getint('RA.Feature.Config', 'max_tweet_tags'):
             return False
 
         # Need to have at least some interactions with the network
@@ -737,6 +737,20 @@ class ReliabilityAssessment:
                                                  output, self.input_date, self.ticker)
 
     def tweet_label(self):
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=False, neural_filter=False)
+        output_tags = []
+        for tweet in tweets_collection:
+            matches = re.findall(r'[$#]\w+', tweet['text'])
+            if len(matches) > 10:
+                output_tags.append(matches)
+
+        with open(f"{self.ticker}_tags_pie.csv", "w", encoding="utf-8") as f:
+            for record in output_tags:
+                for item in record:
+                    f.write(f'{item}\n')
+
+        exit(0)
         stock_name = "twitter" if self.ticker == 'TWTR' else "facebook"
         # case-insensitive search.
         query_field = {"$or": [
