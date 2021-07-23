@@ -773,7 +773,7 @@ class ReliabilityAssessment:
         for tweet in tweets_collection:
             tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 
-        batch_size = 20
+        batch_size = 10
         for i in trange(0, len(tweets_collection), batch_size):
             tweets_collection_small = tweets_collection[i:i + batch_size]
 
