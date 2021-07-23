@@ -551,7 +551,7 @@ class ReliabilityAssessment:
         joblib.dump(clf, PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl')
 
     @staticmethod
-    def __subjectivity_tweet_preprocess(text, text_processor) -> list:
+    def __enhanced_tweet_preprocess(text, text_processor) -> list:
         """
         Use default tweet preprocess technique first
         :param text:
@@ -620,7 +620,7 @@ class ReliabilityAssessment:
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-                tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                tweets_text = [self.__enhanced_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
                 enc_input = np.vstack(self.__infersent_embeddings(infersent, tweets_text))
 
@@ -657,7 +657,7 @@ class ReliabilityAssessment:
             batch_size = 128
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-                tweets_text = [" ".join(self.__subjectivity_tweet_preprocess(tweet['text'], text_processor)) for tweet
+                tweets_text = [" ".join(self.__enhanced_tweet_preprocess(tweet['text'], text_processor)) for tweet
                                in
                                tweets_collection_small]
                 # Model Checkpoints is trained using max_seq_len of 128. With fine-tuned model, this data may be changed
@@ -724,7 +724,7 @@ class ReliabilityAssessment:
             tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
-                tweets_text = [self.__subjectivity_tweet_preprocess(tweet['text'], text_processor) for tweet in
+                tweets_text = [self.__enhanced_tweet_preprocess(tweet['text'], text_processor) for tweet in
                                tweets_collection_small]
                 # Results should be a list of dataframe
                 results = [predict(" ".join(tweet), model, tokenizer) for tweet in tweets_text]
@@ -752,10 +752,26 @@ class ReliabilityAssessment:
         return output_dict
 
     def arg_update(self):
+        text_processor = TextPreProcessor(
+            # terms that will be normalized
+            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
+            annotate=[],
+            fix_bad_unicode=True,  # fix HTML tokens
+            segmenter="twitter",
+            corrector="twitter",
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+            spell_correction=True,
+            tokenizer=SocialTokenizer(lowercase=False).tokenize,
+            dicts=[emoticons]
+        )
         projection_field = {'text': 1}
         tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
                                                             ra_raw=False, feature_filter=True,
                                                             projection_override=projection_field)
+        for tweet in tweets_collection:
+            tweet['text'] = self.__enhanced_tweet_preprocess(tweet['text'], text_processor)
 
         batch_size = 10
         for i in trange(0, len(tweets_collection), batch_size):
