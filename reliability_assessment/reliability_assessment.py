@@ -740,15 +740,15 @@ class ReliabilityAssessment:
 
     @staticmethod
     def arg_wrapper(tweet) -> dict:
-        models = ['IBMfasttext', 'PEdep', 'PEfasttext', 'PEglove', 'WDdep', 'WDfasttext', 'WDglove', ]
+        models = ['IBMfasttext', 'PEdep', 'PEfasttext', 'PEglove', 'WDdep', 'WDfasttext', 'WDglove']
         payload = tweet['text']
         headers = {'Content-Type': 'text/plain'}
-        output_dict = {'_id': tweet['_id'], 'output': []}
+        output_dict = {'_id': tweet['_id'], 'output': {}}
         for model in models:
             url = f"http://ltdemos.informatik.uni-hamburg.de/arg-api//classify{model}"
             response = requests.request("POST", url, headers=headers, data=payload)
             if response.status_code == 200:
-                output_dict['output'].append({model: response.json()})
+                output_dict['output'][model] = response.json()
         return output_dict
 
     def arg_update(self):
@@ -771,9 +771,9 @@ class ReliabilityAssessment:
                                                             ra_raw=False, feature_filter=True,
                                                             projection_override=projection_field)
         for tweet in tweets_collection:
-            tweet['text'] = self.__enhanced_tweet_preprocess(tweet['text'], text_processor)
+            tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 
-        batch_size = 10
+        batch_size = 20
         for i in trange(0, len(tweets_collection), batch_size):
             tweets_collection_small = tweets_collection[i:i + batch_size]
 
