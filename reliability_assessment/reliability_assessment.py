@@ -14,6 +14,7 @@ import joblib
 import nltk
 import numpy as np
 import pandas as pd
+import requests
 import tensorflow as tf
 import torch
 from bert import BertModelLayer
@@ -736,6 +737,38 @@ class ReliabilityAssessment:
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.finBERT-detector',
                                                  output, self.input_date, self.ticker)
+
+    @staticmethod
+    def arg_wrapper(tweet) -> dict:
+        models = ['IBMfasttext', 'PEdep', 'PEfasttext', 'PEglove', 'WDdep', 'WDfasttext', 'WDglove', ]
+        payload = tweet['text']
+        headers = {'Content-Type': 'text/plain'}
+        output_dict = {'_id': tweet['_id'], 'output': []}
+        for model in models:
+            url = f"http://ltdemos.informatik.uni-hamburg.de/arg-api//classify{model}"
+            response = requests.request("POST", url, headers=headers, data=payload)
+            if response.status_code == 200:
+                output_dict['output'].append({model: response.json()})
+        return output_dict
+
+    def arg_update(self):
+        projection_field = {'text': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True,
+                                                            projection_override=projection_field)
+
+        batch_size = 10
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                targer_futures = [executor.submit(self.arg_wrapper, tweet) for tweet in tweets_collection_small]
+
+            # Update MongoDB
+            self.db_instance.update_one_bulk([future.result()['_id'] for future in targer_futures],
+                                             'ra_raw.targer-detector',
+                                             [future.result()['output'] for future in targer_futures],
+                                             self.input_date, self.ticker)
 
     @staticmethod
     def __annotation_query(ticker) -> dict:

@@ -30,9 +30,11 @@ def main():
                                  'neural-generate', 'neural-update',
                                  'neural-update-fake', 'neural-train', 'neural-verify',
                                  'subj-train', 'subj-update', 'subj-verify',
+                                 'arg-update', 'arg-verify',
                                  'sentiment-verify', 'label', 'eval'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
-                        choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob', 'wordemb'])
+                        choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob', 'wordemb',
+                                 'ibm-fasttext'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -101,6 +103,8 @@ def main():
                                             wordemb=('wordemb' in args.models), model_version=2)
         if 'subj-verify' in args.ra_tasks:
             ra_instance.subjectivity_verify()
+        if 'arg-update' in args.ra_tasks:
+            ra_instance.arg_update()
         if 'sentiment-verify' in args.ra_tasks:
             ra_instance.sentiment_verify()
         if 'label' in args.ra_tasks:
