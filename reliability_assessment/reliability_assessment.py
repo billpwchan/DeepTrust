@@ -5,6 +5,7 @@ import gc
 import os
 import re
 import subprocess
+import time
 from datetime import date
 from random import randint
 
@@ -746,9 +747,15 @@ class ReliabilityAssessment:
         output_dict = {'_id': tweet['_id'], 'output': {}}
         for model in models:
             url = f"http://ltdemos.informatik.uni-hamburg.de/arg-api//classify{model}"
-            response = requests.request("POST", url, headers=headers, data=payload)
-            if response.status_code == 200:
-                output_dict['output'][model] = response.json()
+            for retry_limit in range(5):
+                try:
+                    response = requests.request("POST", url, headers=headers, data=payload)
+                    if response.status_code == 200:
+                        output_dict['output'][model] = response.json()
+                    break
+                except ConnectionError as e:
+                    time.sleep(5)
+                    continue
         return output_dict
 
     def arg_update(self):
