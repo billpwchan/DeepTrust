@@ -173,14 +173,14 @@ class ReliabilityAssessment:
             batch_size = 30  # Good for 1080 Ti
             if fake:
                 gpt_collection = \
-                    self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
-                                                                   self.input_date, self.ticker,
-                                                                   database='fake',
-                                                                   select_field={"_id": 1, "id": 1, "text": 1},
-                                                                   feature_filter=False)
+                    self.db_instance.get_non_updated_tweets('ra_raw.RoBERTa-detector',
+                                                            self.input_date, self.ticker,
+                                                            database='fake',
+                                                            select_field={"_id": 1, "id": 1, "text": 1},
+                                                            feature_filter=False)
             else:
-                gpt_collection = self.db_instance.get_neural_non_updated_tweets('ra_raw.RoBERTa-detector',
-                                                                                self.input_date, self.ticker)
+                gpt_collection = self.db_instance.get_non_updated_tweets('ra_raw.RoBERTa-detector',
+                                                                         self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GPT-2: {len(gpt_collection)}')
 
             for i in trange(0, len(gpt_collection), batch_size):
@@ -204,14 +204,14 @@ class ReliabilityAssessment:
             self.nv_instance.init_gltr_models(model=gltr_type)
             batch_size = 2 if gltr_gpt2 else 50
             if fake:
-                gltr_collection = self.db_instance.get_neural_non_updated_tweets(
+                gltr_collection = self.db_instance.get_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector",
                     self.input_date, self.ticker,
                     database='fake',
                     select_field={"_id": 1, "id": 1, "text": 1},
                     feature_filter=False)
             else:
-                gltr_collection = self.db_instance.get_neural_non_updated_tweets(
+                gltr_collection = self.db_instance.get_non_updated_tweets(
                     f"ra_raw.{gltr_type}-detector", self.input_date, self.ticker)
             self.default_logger.info(f'Remaining entries to verify with GLTR: {len(gltr_collection)}')
 
@@ -773,10 +773,11 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        projection_field = {'text': 1}
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True,
-                                                            projection_override=projection_field)
+        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-filter', self.input_date,
+                                                                    self.ticker, database='tweet',
+                                                                    select_field={'text': 1}, feature_filter=True)
+        self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
+
         for tweet in tweets_collection:
             tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 

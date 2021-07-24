@@ -69,8 +69,8 @@ class MongoDB:
             unselect_filed = projection_override
         return [record for record in self.db[collection_name].find(query_field, unselect_filed)]
 
-    def get_neural_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
-                                      select_field=None, feature_filter: bool = True):
+    def get_non_updated_tweets(self, field, input_date: date, ticker: str, database: str = 'tweet',
+                               select_field=None, feature_filter: bool = True):
         if select_field is None:
             select_field = {"_id": 1, "id": 1, "text": 1, "public_metrics": 1}
         collection_name = f'{ticker}_{input_date.strftime("%Y-%m-%d")}_{database}'
