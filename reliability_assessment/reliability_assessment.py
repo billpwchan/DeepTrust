@@ -753,7 +753,7 @@ class ReliabilityAssessment:
                     if response.status_code == 200:
                         output_dict['output'][model] = response.json()
                     break
-                except ConnectionError as e:
+                except ConnectionError or requests.exceptions.ChunkedEncodingError as e:
                     time.sleep(5)
                     continue
         return output_dict
