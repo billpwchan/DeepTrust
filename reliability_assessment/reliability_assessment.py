@@ -752,7 +752,9 @@ class ReliabilityAssessment:
                     response = requests.request("POST", url, headers=headers, data=payload)
                     if response.status_code == 200:
                         output_dict['output'][model] = response.json()
-                    break
+                        break
+                    else:
+                        print("Retry...")
                 except:
                     time.sleep(5)
                     continue
@@ -781,7 +783,7 @@ class ReliabilityAssessment:
         for tweet in tweets_collection:
             tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 
-        batch_size = 10
+        batch_size = 30
         for i in trange(0, len(tweets_collection), batch_size):
             tweets_collection_small = tweets_collection[i:i + batch_size]
 
