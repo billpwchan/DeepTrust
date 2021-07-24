@@ -773,7 +773,7 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-filter', self.input_date,
+        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
                                                                     self.ticker, database='tweet',
                                                                     select_field={'text': 1}, feature_filter=True)
         self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
