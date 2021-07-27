@@ -452,6 +452,93 @@ class ReliabilityAssessment:
                                              'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
     @staticmethod
+    def arg_wrapper(tweet) -> dict:
+        models = ['IBMfasttext', 'PEdep', 'PEfasttext', 'PEglove', 'WDdep', 'WDfasttext', 'WDglove']
+        payload = tweet['text']
+        headers = {'Content-Type': 'text/plain'}
+        output_dict = {'_id': tweet['_id'], 'output': {}}
+        for model in models:
+            url = f"http://ltdemos.informatik.uni-hamburg.de/arg-api//classify{model}"
+            for retry_limit in range(5):
+                try:
+                    response = requests.request("POST", url, headers=headers, data=payload)
+                    if response.status_code == 200:
+                        output_dict['output'][model] = response.json()
+                        break
+                    else:
+                        print("Retry...")
+                except:
+                    time.sleep(5)
+                    continue
+        return output_dict
+
+    def arg_update(self):
+        text_processor = TextPreProcessor(
+            # terms that will be normalized
+            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
+            annotate=[],
+            fix_bad_unicode=True,  # fix HTML tokens
+            segmenter="twitter",
+            corrector="twitter",
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+            spell_correction=True,
+            tokenizer=SocialTokenizer(lowercase=False).tokenize,
+            dicts=[emoticons]
+        )
+        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
+                                                                    self.ticker, database='tweet',
+                                                                    select_field={'text': 1}, feature_filter=True)
+        # query_field = self.__annotation_query(self.ticker)
+        # tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+        #                                                           projection_override={'text': 1})
+        self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
+
+        batch_size = 30
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+            for index in range(len(tweets_collection_small)):
+                tweets_collection_small[index]['text'] = self.__enhanced_tweet_preprocess(
+                    tweets_collection_small[index]['text'], text_processor, tokenize=False)
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                targer_futures = [executor.submit(self.arg_wrapper, tweet) for tweet in tweets_collection_small]
+
+            # Update MongoDB
+            self.db_instance.update_one_bulk([future.result()['_id'] for future in targer_futures],
+                                             'ra_raw.targer-detector',
+                                             [future.result()['output'] for future in targer_futures],
+                                             self.input_date, self.ticker)
+
+    def __arg_rules(self, targer_output) -> bool:
+        """
+        Structure of targer output: {"IBMfasttext": [[{'label':...}, {'label':...}], [{'label':...}]]
+        Detector -> Sentence -> Word
+        :param targer_output:
+        :return:
+        """
+        output = {'P': False, 'C': False, 'O': False}
+        for sentence in targer_output['IBMfasttext']:
+            for word in sentence:
+                output[word['label'][0]] = True
+        return output['C'] or output['P']
+
+    def arg_verify(self):
+        projection_field = {'ra_raw.targer-detector': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True,
+                                                            projection_override=projection_field)
+
+        batch_size = 100
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+            arg_filter = [self.__arg_rules(tweet['ra_raw']['targer-detector']) for tweet in tweets_collection_small]
+
+            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                             'ra_raw.arg-filter', arg_filter, self.input_date, self.ticker)
+
+    @staticmethod
     def __infersent_embeddings(model, batch, batch_size=8, tokenize=False) -> list:
         sentences = [' '.join(s) for s in batch]
         embeddings = model.encode(sentences, bsize=batch_size, tokenize=tokenize)
@@ -739,93 +826,6 @@ class ReliabilityAssessment:
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.finBERT-detector',
                                                  output, self.input_date, self.ticker)
-
-    @staticmethod
-    def arg_wrapper(tweet) -> dict:
-        models = ['IBMfasttext', 'PEdep', 'PEfasttext', 'PEglove', 'WDdep', 'WDfasttext', 'WDglove']
-        payload = tweet['text']
-        headers = {'Content-Type': 'text/plain'}
-        output_dict = {'_id': tweet['_id'], 'output': {}}
-        for model in models:
-            url = f"http://ltdemos.informatik.uni-hamburg.de/arg-api//classify{model}"
-            for retry_limit in range(5):
-                try:
-                    response = requests.request("POST", url, headers=headers, data=payload)
-                    if response.status_code == 200:
-                        output_dict['output'][model] = response.json()
-                        break
-                    else:
-                        print("Retry...")
-                except:
-                    time.sleep(5)
-                    continue
-        return output_dict
-
-    def arg_update(self):
-        text_processor = TextPreProcessor(
-            # terms that will be normalized
-            omit=['email', 'percent', 'money', 'phone', 'user', 'time', 'url', 'date', 'number'],
-            annotate=[],
-            fix_bad_unicode=True,  # fix HTML tokens
-            segmenter="twitter",
-            corrector="twitter",
-            unpack_hashtags=True,  # perform word segmentation on hashtags
-            unpack_contractions=True,  # Unpack contractions (can't -> can not)
-            spell_correct_elong=False,  # spell correction for elongated words
-            spell_correction=True,
-            tokenizer=SocialTokenizer(lowercase=False).tokenize,
-            dicts=[emoticons]
-        )
-        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
-                                                                    self.ticker, database='tweet',
-                                                                    select_field={'text': 1}, feature_filter=True)
-        # query_field = self.__annotation_query(self.ticker)
-        # tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-        #                                                           projection_override={'text': 1})
-        self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
-
-        batch_size = 30
-        for i in trange(0, len(tweets_collection), batch_size):
-            tweets_collection_small = tweets_collection[i:i + batch_size]
-            for index in range(len(tweets_collection_small)):
-                tweets_collection_small[index]['text'] = self.__enhanced_tweet_preprocess(
-                    tweets_collection_small[index]['text'], text_processor, tokenize=False)
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                targer_futures = [executor.submit(self.arg_wrapper, tweet) for tweet in tweets_collection_small]
-
-            # Update MongoDB
-            self.db_instance.update_one_bulk([future.result()['_id'] for future in targer_futures],
-                                             'ra_raw.targer-detector',
-                                             [future.result()['output'] for future in targer_futures],
-                                             self.input_date, self.ticker)
-
-    def __arg_rules(self, targer_output) -> bool:
-        """
-        Structure of targer output: {"IBMfasttext": [[{'label':...}, {'label':...}], [{'label':...}]]
-        Detector -> Sentence -> Word
-        :param targer_output:
-        :return:
-        """
-        output = {'P': False, 'C': False, 'O': False}
-        for sentence in targer_output['IBMfasttext']:
-            for word in sentence:
-                output[word['label'][0]] = True
-        return output['C'] or output['P']
-
-    def arg_verify(self):
-        projection_field = {'ra_raw.targer-detector': 1}
-        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-                                                            ra_raw=False, feature_filter=True,
-                                                            projection_override=projection_field)
-
-        batch_size = 100
-        for i in trange(0, len(tweets_collection), batch_size):
-            tweets_collection_small = tweets_collection[i:i + batch_size]
-            arg_filter = [self.__arg_rules(tweet['ra_raw']['targer-detector']) for tweet in tweets_collection_small]
-
-            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
-                                             'ra_raw.arg-filter', arg_filter, self.input_date, self.ticker)
 
     @staticmethod
     def __annotation_query(ticker) -> dict:
