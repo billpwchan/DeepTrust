@@ -838,21 +838,6 @@ class ReliabilityAssessment:
         return query_field
 
     def tweet_label(self):
-        # tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
-        #                                                     ra_raw=False, feature_filter=False, neural_filter=False)
-        # output_tags = []
-        # for tweet in tweets_collection:
-        #     matches = re.findall(r'[$#][a-zA-Z]+', tweet['text'])
-        #     if len(matches) > 10:
-        #         output_tags.append(matches)
-        #
-        # with open(f"{self.ticker}_tags_pie.csv", "w", encoding="utf-8") as f:
-        #     for record in output_tags:
-        #         for item in record:
-        #             f.write(f'{item}\n')
-        #
-        # exit(0)
-
         query_field = self.__annotation_query(self.ticker)
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker)
         self.default_logger.info(f"Total Tweets: {len(label_dataset)}")
@@ -868,7 +853,7 @@ class ReliabilityAssessment:
     def tweet_eval(self):
         query_field = self.__annotation_query(self.ticker)
 
-        filters = ['feature-filter', 'neural-filter', 'subj-filter', 'label']
+        filters = ['feature-filter', 'neural-filter', 'arg-filter', 'subj-filter', 'label']
         projection_filed = {f'ra_raw.{filter_name}': 1 for filter_name in filters}
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
                                                               projection_override=projection_filed)
@@ -876,10 +861,13 @@ class ReliabilityAssessment:
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
 
         eval_dict = {
-            'feature':             eval_df['feature-filter'],
-            'feature+neural':      eval_df['feature-filter'] & eval_df['neural-filter'],
-            'feature+subj':        eval_df['feature-filter'] & eval_df['subj-filter'],
-            'feature+neural+subj': eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['subj-filter']
+            'feature':                 eval_df['feature-filter'],
+            'feature+neural':          eval_df['feature-filter'] & eval_df['neural-filter'],
+            'feature+subj':            eval_df['feature-filter'] & eval_df['subj-filter'],
+            'feature+arg':             eval_df['feature-filter'] & eval_df['arg-filter'],
+            'feature+neural+subj':     eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['subj-filter'],
+            'feature+neural+arg+subj': eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['arg-filter'] &
+                                       eval_df['subj-filter']
         }
         for key, value in eval_dict.items():
             report = classification_report(eval_df['label'], value, output_dict=True)
