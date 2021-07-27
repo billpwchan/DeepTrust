@@ -776,17 +776,13 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        # tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
-        #                                                             self.ticker, database='tweet',
-        #                                                             select_field={'text': 1}, feature_filter=True)
-        query_field = self.__annotation_query(self.ticker)
-        tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-                                                                  projection_override={'text': 1})
-
+        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
+                                                                    self.ticker, database='tweet',
+                                                                    select_field={'text': 1}, feature_filter=True)
+        # query_field = self.__annotation_query(self.ticker)
+        # tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+        #                                                           projection_override={'text': 1})
         self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
-
-        # for tweet in tweets_collection:
-        #     tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 
         batch_size = 30
         for i in trange(0, len(tweets_collection), batch_size):
@@ -815,7 +811,7 @@ class ReliabilityAssessment:
         for sentence in targer_output['IBMfasttext']:
             for word in sentence:
                 output[word['label'][0]] = True
-        return output['C']
+        return output['C'] or output['P']
 
     def arg_verify(self):
         projection_field = {'ra_raw.targer-detector': 1}
@@ -874,7 +870,9 @@ class ReliabilityAssessment:
             'feature+neural':          eval_df['feature-filter'] & eval_df['neural-filter'],
             'feature+subj':            eval_df['feature-filter'] & eval_df['subj-filter'],
             'feature+arg':             eval_df['feature-filter'] & eval_df['arg-filter'],
+            'feature+neural+arg':      eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['arg-filter'],
             'feature+neural+subj':     eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['subj-filter'],
+            'feature+arg+subj':        eval_df['feature-filter'] & eval_df['arg-filter'] & eval_df['subj-filter'],
             'feature+neural+arg+subj': eval_df['feature-filter'] & eval_df['neural-filter'] & eval_df['arg-filter'] &
                                        eval_df['subj-filter']
         }
