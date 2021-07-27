@@ -105,6 +105,8 @@ def main():
             ra_instance.subjectivity_verify()
         if 'arg-update' in args.ra_tasks:
             ra_instance.arg_update()
+        if 'arg-verify' in args.ra_tasks:
+            ra_instance.arg_verify()
         if 'sentiment-verify' in args.ra_tasks:
             ra_instance.sentiment_verify()
         if 'label' in args.ra_tasks:

@@ -796,6 +796,25 @@ class ReliabilityAssessment:
                                              [future.result()['output'] for future in targer_futures],
                                              self.input_date, self.ticker)
 
+    def __arg_rules(self, targer_output) -> bool:
+        print(targer_output['IBMfasttext'])
+        exit(0)
+        return False
+
+    def arg_verify(self):
+        projection_field = {'ra_raw.targer-detector': 1}
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            ra_raw=False, feature_filter=True,
+                                                            projection_override=projection_field)
+
+        batch_size = 100
+        for i in trange(0, len(tweets_collection), batch_size):
+            tweets_collection_small = tweets_collection[i:i + batch_size]
+            arg_filter = [self.__arg_rules(tweet['ra_raw']['targer-detector']) for tweet in tweets_collection_small]
+
+            self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                             'ra_raw.arg-filter', arg_filter, self.input_date, self.ticker)
+
     @staticmethod
     def __annotation_query(ticker) -> dict:
         stock_name = "twitter" if ticker == 'TWTR' else "facebook"
