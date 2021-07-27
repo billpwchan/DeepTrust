@@ -797,9 +797,17 @@ class ReliabilityAssessment:
                                              self.input_date, self.ticker)
 
     def __arg_rules(self, targer_output) -> bool:
-        print(targer_output['IBMfasttext'])
-        exit(0)
-        return False
+        """
+        Structure of targer output: {"IBMfasttext": [[{'label':...}, {'label':...}], [{'label':...}]]
+        Detector -> Sentence -> Word
+        :param targer_output:
+        :return:
+        """
+        output = {'P': False, 'C': False, 'O': False}
+        for sentence in targer_output['IBMfasttext']:
+            for word in sentence:
+                output[word['label'][0]] = True
+        return output['C']
 
     def arg_verify(self):
         projection_field = {'ra_raw.targer-detector': 1}
