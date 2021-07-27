@@ -552,7 +552,7 @@ class ReliabilityAssessment:
         joblib.dump(clf, PATH_SUBJ / 'infersent' / 'models' / f'{self.ticker}_{self.input_date}_mlp.pkl')
 
     @staticmethod
-    def __enhanced_tweet_preprocess(text, text_processor) -> list:
+    def __enhanced_tweet_preprocess(text, text_processor, tokenize: bool = True) -> list or str:
         """
         Use default tweet preprocess technique first
         :param text:
@@ -573,7 +573,8 @@ class ReliabilityAssessment:
         # Remove excessive whitespaces
         text = re.sub(' +', ' ', text.strip())
         # NLTK Tweet Tokenizer to split texts
-        text = TweetTokenizer().tokenize(text)
+        if tokenize:
+            text = TweetTokenizer().tokenize(text)
         return text
 
     @staticmethod
@@ -775,17 +776,24 @@ class ReliabilityAssessment:
             tokenizer=SocialTokenizer(lowercase=False).tokenize,
             dicts=[emoticons]
         )
-        tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
-                                                                    self.ticker, database='tweet',
-                                                                    select_field={'text': 1}, feature_filter=True)
+        # tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
+        #                                                             self.ticker, database='tweet',
+        #                                                             select_field={'text': 1}, feature_filter=True)
+        query_field = self.__annotation_query(self.ticker)
+        tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+                                                                  projection_override={'text': 1})
+
         self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
 
-        for tweet in tweets_collection:
-            tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
+        # for tweet in tweets_collection:
+        #     tweet['text'] = ReliabilityAssessment.__tweet_preprocess(tweet['text'])
 
         batch_size = 30
         for i in trange(0, len(tweets_collection), batch_size):
             tweets_collection_small = tweets_collection[i:i + batch_size]
+            for index in range(len(tweets_collection_small)):
+                tweets_collection_small[index]['text'] = self.__enhanced_tweet_preprocess(
+                    tweets_collection_small[index]['text'], text_processor, tokenize=False)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 targer_futures = [executor.submit(self.arg_wrapper, tweet) for tweet in tweets_collection_small]
@@ -861,6 +869,7 @@ class ReliabilityAssessment:
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
 
         eval_dict = {
+            'baseline':                [0 for _ in range(eval_df.shape[0])],
             'feature':                 eval_df['feature-filter'],
             'feature+neural':          eval_df['feature-filter'] & eval_df['neural-filter'],
             'feature+subj':            eval_df['feature-filter'] & eval_df['subj-filter'],
