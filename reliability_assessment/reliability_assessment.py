@@ -518,6 +518,9 @@ class ReliabilityAssessment:
         :param targer_output:
         :return:
         """
+        if 'IBMfasttext' not in targer_output:
+            return False
+        
         output = {'P': False, 'C': False, 'O': False}
         for sentence in targer_output['IBMfasttext']:
             for word in sentence:
