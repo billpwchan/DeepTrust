@@ -34,7 +34,7 @@ from sklearnex import patch_sklearn
 from textblob import TextBlob
 from tqdm import tqdm, trange
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
+from sklearn.metrics import fbeta_score
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
 from reliability_assessment.neural_filter.model import DETECTOR_MAP, NeuralVerifier, SUB_PROCESSES
@@ -520,7 +520,7 @@ class ReliabilityAssessment:
         """
         if 'IBMfasttext' not in targer_output:
             return False
-        
+
         output = {'P': False, 'C': False, 'O': False}
         for sentence in targer_output['IBMfasttext']:
             for word in sentence:
@@ -881,5 +881,7 @@ class ReliabilityAssessment:
         }
         for key, value in eval_dict.items():
             report = classification_report(eval_df['label'], value, output_dict=True)
+            report['False']['f2-score'] = fbeta_score(eval_df['label'], value, pos_label=0, beta=2)
+            report['weighted avg']['f2-score'] = fbeta_score(eval_df['label'], value, average='weighted', beta=2)
             df = pd.DataFrame(report).transpose().to_csv(
                 Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
