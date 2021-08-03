@@ -881,7 +881,7 @@ class ReliabilityAssessment:
         }
         for key, value in eval_dict.items():
             report = classification_report(eval_df['label'], value, output_dict=True)
-            report['False']['f2-score'] = fbeta_score(eval_df['label'], value, pos_label=0, beta=2)
-            report['weighted avg']['f2-score'] = fbeta_score(eval_df['label'], value, average='weighted', beta=2)
+            report['False']['f0.5-score'] = fbeta_score(eval_df['label'], value, pos_label=0, beta=0.5)
+            report['weighted avg']['f0.5-score'] = fbeta_score(eval_df['label'], value, average='weighted', beta=0.5)
             df = pd.DataFrame(report).transpose().to_csv(
                 Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
