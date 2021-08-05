@@ -865,13 +865,6 @@ class ReliabilityAssessment:
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
                                                               projection_override=projection_filed)
 
-        print("Unreliable + Objective, Unreliable + Subjective, Reliable + Objective, Reliable + Subjective")
-        print(sum([1 for tweet in label_dataset if not tweet['ra_raw']['label'] and tweet['ra_raw']['subj-filter']]))
-        print(sum([1 for tweet in label_dataset if not tweet['ra_raw']['label'] and not tweet['ra_raw']['subj-filter']]))
-        print(sum([1 for tweet in label_dataset if tweet['ra_raw']['label'] and tweet['ra_raw']['subj-filter']]))
-        print(sum([1 for tweet in label_dataset if tweet['ra_raw']['label'] and not tweet['ra_raw']['subj-filter']]))
-        exit(0)
-
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
 
         eval_dict = {
