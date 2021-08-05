@@ -141,7 +141,6 @@ Update subjectivity analysis results to the mongodb collection using the fine-tu
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
-
 ```
 
 ## Important Notes
