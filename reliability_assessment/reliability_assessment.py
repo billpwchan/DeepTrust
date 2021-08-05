@@ -870,6 +870,7 @@ class ReliabilityAssessment:
         eval_dict = {
             'baseline':                [0 for _ in range(eval_df.shape[0])],
             'feature':                 eval_df['feature-filter'],
+            'subj':                    eval_df['subj-filter'],
             'feature+neural':          eval_df['feature-filter'] & eval_df['neural-filter'],
             'feature+subj':            eval_df['feature-filter'] & eval_df['subj-filter'],
             'feature+arg':             eval_df['feature-filter'] & eval_df['arg-filter'],
