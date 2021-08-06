@@ -110,11 +110,15 @@ classifying synthetic tweets.
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake -models roberta gltr-bert gltr-gpt2
 ```
 
-Train a SVM classifier and use it for generating the final decision on tweets. Also, SVM classification results should
-be updated to the tweet collection.
+Train a SVM classifier and use it for generating the final decision on tweets. 
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train neural-update --models svm
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train --models gltr-bert gltr-gpt2
+```
+
+Also, SVM classification results should be updated to the tweet collection.
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update --models svm
 ```
 
 Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors.

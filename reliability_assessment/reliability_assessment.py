@@ -859,6 +859,7 @@ class ReliabilityAssessment:
 
     def tweet_eval(self):
         query_field = self.__annotation_query(self.ticker)
+        print(query_field)
         filters = ['feature-filter', 'neural-filter', 'arg-filter', 'subj-filter', 'label']
         projection_filed = {f'ra_raw.{filter_name}': 1 for filter_name in filters}
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
