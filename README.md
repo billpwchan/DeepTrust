@@ -92,7 +92,7 @@ powerful GPU (tested on 1080Ti), the total time is approximately 3 days for the 
 financial anomalies.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update -models roberta gltr-bert gltr-gpt2
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update --models roberta gltr-bert gltr-gpt2
 ```
 
 Fine-tune a GPT-2-medium generator model and generate some fake tweets for training! It may take up to 4 hours on a
@@ -107,7 +107,7 @@ Update detectors results on the generated fake tweets! These results are used fo
 classifying synthetic tweets.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake -models roberta gltr-bert gltr-gpt2
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake --models roberta gltr-bert gltr-gpt2
 ```
 
 Train a SVM classifier and use it for generating the final decision on tweets. 

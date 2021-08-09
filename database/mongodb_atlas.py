@@ -25,7 +25,7 @@ class MongoDB:
         for database in ['tweet', 'author']:
             if f'{collection_prefix}_{database}' in collist:
                 self.default_logger.warning(f'{collection_prefix}_{database} collection already exists.')
-                self.drop_collection(input_date, ticker, database='tweet')
+                self.drop_collection(input_date, ticker, database=database)
 
         # Ensure Unique Index
         self.db[f'{collection_prefix}_tweet'].create_index("id", unique=True)
