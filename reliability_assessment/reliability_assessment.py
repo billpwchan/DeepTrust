@@ -865,7 +865,7 @@ class ReliabilityAssessment:
                                                               projection_override=projection_filed)
 
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
-        print(eval_df.isna().sum())
+        self.default_logger.info(f'Missing Value (NaN) Summary: {eval_df.isna().sum()}')
         eval_df.fillna(False, inplace=True)
 
         eval_dict = {

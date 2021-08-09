@@ -110,11 +110,15 @@ classifying synthetic tweets.
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake -models roberta gltr-bert gltr-gpt2
 ```
 
-Train a SVM classifier and use it for generating the final decision on tweets. Also, SVM classification results should
-be updated to the tweet collection.
+Train a SVM classifier and use it for generating the final decision on tweets. 
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train neural-update --models svm
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train --models gltr-bert gltr-gpt2
+```
+
+Also, SVM classification results should be updated to the tweet collection.
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update --models svm
 ```
 
 Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors.
@@ -123,7 +127,19 @@ Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-verify
 ```
 
-3. **Subjectivity Analysis and Filtering**
+3. **Argument Detection and Filtering**
+
+Update `TARGER` sequence labeling results to the Mongo collection
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat arg-update
+```
+
+Update argument detection results to the mongodb collection using the sequence tags.
+```bash
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat arg-verify
+```
+
+5. **Subjectivity Analysis and Filtering**
 
 Fine-Tune InferSent model using SUBJ dataset and store the model checkpoint
 to `. /reliability_assessment/subj_filter/infersent/models`.
@@ -141,6 +157,12 @@ Update subjectivity analysis results to the mongodb collection using the fine-tu
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
+```
+
+6. **Sentiment Analysis**
+Update `FinBERT` evaluation results to the Mongo collection.
+```bash
+python -m RA -ad 30/04/2021 -t TWTR -rat sentiment-verify
 ```
 
 ## Important Notes
