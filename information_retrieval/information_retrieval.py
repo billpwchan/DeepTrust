@@ -100,7 +100,9 @@ class TwitterAPIInterface:
     def tw_lookup(self, ids: str, tweet_fields: str) -> json:
         query_params = {
             "ids":          ids,
-            "tweet.fields": tweet_fields
+            "tweet.fields": tweet_fields,
+            "expansions":   "geo.place_id",
+            "place.fields": "contained_within,country,country_code,full_name,geo,id,name,place_type"
         }
         for retry_limit in range(50):
             search_url = f"https://api.twitter.com/2/tweets"
@@ -354,7 +356,13 @@ class InformationRetrieval:
                                              self.input_date, self.ticker, ref_field='id')
             # Update Geo Field
             if any('geo' in tweet for tweet in tw_response['data']):
+                tweet_collection = [tweet for tweet in tw_response['data'] if 'geo' in tweet]
+                for tweet in tweet_collection:
+                    expansion_fields = next(
+                        item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id'])
+                    tweet['geo'].update(expansion_fields)
+                    # Remove excessive field
+                    tweet['geo'].pop('id')
                 self.db_instance.update_one_bulk(
-                    [tweet['id'] for tweet in tw_response['data'] if 'geo' in tweet], 'geo',
-                    [tweet['geo'] for tweet in tw_response['data'] if 'geo' in tweet],
+                    [tweet['id'] for tweet in tweet_collection], 'geo', [tweet['geo'] for tweet in tweet_collection],
                     self.input_date, self.ticker, ref_field='id')
