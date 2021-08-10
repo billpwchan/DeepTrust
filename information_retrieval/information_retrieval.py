@@ -330,6 +330,12 @@ class InformationRetrieval:
                                                     companies=eikon_companies, ticker=self.ticker, verified=True,
                                                     max_results=100, next_token=next_token)
             tw_response = self.tw_instance.tw_search(tw_query)
+            for tweet in tw_response['data']:
+                if 'geo' in tweet:
+                    expansion_fields = next(
+                        item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id'])
+                    tweet['geo'].update(expansion_fields)
+                    tweet['geo'].pop('id')
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['data'], 'tweet')
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['includes']['users'], 'author')
             if 'next_token' in tw_response['meta']:
