@@ -347,13 +347,14 @@ class InformationRetrieval:
             ids_collection_small = tweet_ids[i:i + SLICES]
             ids = ",".join([tweet_id for tweet_id in ids_collection_small])
             tw_response = self.tw_instance.tw_lookup(ids, tweet_fields)
-            print(tw_response)
-            exit(0)
+
             # Update Possibly Sensitive Field
             self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], 'possibly_sensitive',
                                              [tweet['possibly_sensitive'] for tweet in tw_response['data']],
                                              self.input_date, self.ticker, ref_field='id')
             # Update Geo Field
-            self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], 'geo',
-                                             [tweet['geo'] for tweet in tw_response['data']],
-                                             self.input_date, self.ticker, ref_field='id')
+            if any('geo' in tweet for tweet in tw_response['data']):
+                self.db_instance.update_one_bulk(
+                    [tweet['id'] for tweet in tw_response['data'] if 'geo' in tweet], 'geo',
+                    [tweet['geo'] for tweet in tw_response['data'] if 'geo' in tweet],
+                    self.input_date, self.ticker, ref_field='id')
