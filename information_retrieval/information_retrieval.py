@@ -63,7 +63,7 @@ class TwitterAPIInterface:
         query_params = {
             'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS} {INDIVIDUAL_TWEET}',
             'expansions':   'author_id',
-            'tweet.fields': 'author_id,context_annotations,created_at,entities,id,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld',
+            'tweet.fields': 'author_id,context_annotations,created_at,entities,id,geo,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
             'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(
                 pytz.utc).isoformat(),
@@ -337,19 +337,23 @@ class InformationRetrieval:
                 f"Oldest ID: {tw_response['meta']['oldest_id']} Newest ID: {tw_response['meta']['newest_id']}")
 
     def update_tweets(self):
-        tweet_fields = 'possibly_sensitive'
+        tweet_fields = 'possibly_sensitive,geo'
         tweet_ids = [tweet['id'] for tweet in
                      self.db_instance.get_all_tweets(self.input_date, self.ticker, feature_filter=False)]
         self.default_logger.info(f'Remaining Tweet IDs to Update: {len(tweet_ids)}')
-
-        self.db_instance.update_all(tweet_fields, False, self.input_date, self.ticker)
 
         SLICES = 100
         for i in trange(0, len(tweet_ids), SLICES):
             ids_collection_small = tweet_ids[i:i + SLICES]
             ids = ",".join([tweet_id for tweet_id in ids_collection_small])
             tw_response = self.tw_instance.tw_lookup(ids, tweet_fields)
-
-            self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], tweet_fields,
-                                             [tweet[tweet_fields] for tweet in tw_response['data']],
+            print(tw_response)
+            exit(0)
+            # Update Possibly Sensitive Field
+            self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], 'possibly_sensitive',
+                                             [tweet['possibly_sensitive'] for tweet in tw_response['data']],
+                                             self.input_date, self.ticker, ref_field='id')
+            # Update Geo Field
+            self.db_instance.update_one_bulk([tweet['id'] for tweet in tw_response['data']], 'geo',
+                                             [tweet['geo'] for tweet in tw_response['data']],
                                              self.input_date, self.ticker, ref_field='id')
