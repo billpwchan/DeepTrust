@@ -62,9 +62,10 @@ class TwitterAPIInterface:
 
         query_params = {
             'query':        f'({market_domain} OR price) ({" OR ".join(query_keywords)}) {LANG_EN} {REMOVE_ADS} {ORIGINAL_TWEETS} {INDIVIDUAL_TWEET}',
-            'expansions':   'author_id',
+            'expansions':   'author_id,geo.place_id',
             'tweet.fields': 'author_id,context_annotations,created_at,entities,id,geo,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld',
             'user.fields':  'created_at,description,id,location,name,public_metrics,url,username,verified',
+            "place.fields": "contained_within,country,country_code,full_name,geo,id,name,place_type",
             'start_time':   datetime(start_date.year, start_date.month, start_date.day).astimezone(
                 pytz.utc).isoformat(),
             'end_time':     datetime(end_date.year, end_date.month, end_date.day).astimezone(pytz.utc).isoformat(),
