@@ -333,9 +333,11 @@ class InformationRetrieval:
             for tweet in tw_response['data']:
                 if 'geo' in tweet:
                     expansion_fields = next(
-                        item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id'])
+                        (item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id']),
+                        {})
                     tweet['geo'].update(expansion_fields)
-                    tweet['geo'].pop('id')
+                    # Remove excessive field
+                    tweet['geo'].pop('id', None)
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['data'], 'tweet')
             self.db_instance.insert_many(self.input_date, self.ticker, tw_response['includes']['users'], 'author')
             if 'next_token' in tw_response['meta']:
@@ -366,10 +368,11 @@ class InformationRetrieval:
                 tweet_collection = [tweet for tweet in tw_response['data'] if 'geo' in tweet]
                 for tweet in tweet_collection:
                     expansion_fields = next(
-                        item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id'])
+                        (item for item in tw_response['includes']['places'] if item['id'] == tweet['geo']['place_id']),
+                        {})
                     tweet['geo'].update(expansion_fields)
                     # Remove excessive field
-                    tweet['geo'].pop('id')
+                    tweet['geo'].pop('id', None)
                 self.db_instance.update_one_bulk(
                     [tweet['id'] for tweet in tweet_collection], 'geo', [tweet['geo'] for tweet in tweet_collection],
                     self.input_date, self.ticker, ref_field='id')
