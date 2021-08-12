@@ -31,7 +31,7 @@ def main():
                                  'neural-update-fake', 'neural-train', 'neural-verify',
                                  'subj-train', 'subj-update', 'subj-verify',
                                  'arg-update', 'arg-verify',
-                                 'sentiment-verify', 'label', 'eval'])
+                                 'sentiment-verify', 'label', 'eval', 'neural-eval'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
                         choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob', 'wordemb',
                                  'ibm-fasttext'])
@@ -113,6 +113,8 @@ def main():
             ra_instance.tweet_label()
         if 'eval' in args.ra_tasks:
             ra_instance.tweet_eval()
+        if 'neural-eval' in args.ra_tasks:
+            ra_instance.neural_eval()
 
 
 if __name__ == '__main__':

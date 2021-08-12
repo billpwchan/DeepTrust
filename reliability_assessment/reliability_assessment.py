@@ -401,7 +401,8 @@ class ReliabilityAssessment:
         # Evaluate the trained classifier for its performance
         self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
-    def __neural_rules(self, roberta_prob: dict, gpt2_prob: dict, bert_prob: dict) -> bool or None:
+    def __neural_rules(self, roberta_prob: dict, gpt2_prob: dict, bert_prob: dict,
+                       roberta_threshold: float = None, neural_mode: str = None) -> bool or None:
         """
         The rule can be:
         1) If roberta_prob['real'] is greater than the threshold (e.g., 0.8), we say the tweet is definitely real
@@ -415,7 +416,10 @@ class ReliabilityAssessment:
         # Empty dicts, mostly caused by tokenizer errors. Ignore them.
         if not roberta_prob or not gpt2_prob or not bert_prob:
             return False
-        if roberta_prob['real_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
+        # If override, then use the parameter value
+        roberta_threshold = self.config.getfloat('RA.Neural.Config', 'roberta_threshold') \
+            if roberta_threshold is None else roberta_threshold
+        if roberta_prob['real_probability'] >= roberta_threshold:
             return True
         else:
             gpt2_weight = self.config.getfloat('RA.Neural.Config', 'gpt2_weight')
@@ -425,7 +429,8 @@ class ReliabilityAssessment:
                     roberta_prob['fake_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
                 return False
 
-        neural_mode = self.config.get('RA.Neural.Config', 'neural_mode')
+        # If override, then use the parameter value
+        neural_mode = self.config.get('RA.Neural.Config', 'neural_mode') if neural_mode is None else neural_mode
         assert neural_mode == '' or neural_mode == 'recall' or neural_mode == 'precision', "Invalid Neural Mode"
         return None if neural_mode == '' else True if neural_mode == 'recall' else False
 
@@ -860,9 +865,9 @@ class ReliabilityAssessment:
     def tweet_eval(self):
         query_field = self.__annotation_query(self.ticker)
         filters = ['feature-filter', 'neural-filter', 'arg-filter', 'subj-filter', 'label']
-        projection_filed = {f'ra_raw.{filter_name}': 1 for filter_name in filters}
+        projection_field = {f'ra_raw.{filter_name}': 1 for filter_name in filters}
         label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-                                                              projection_override=projection_filed)
+                                                              projection_override=projection_field)
 
         eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=filters)
         self.default_logger.info(f'Missing Value (NaN) Summary: {eval_df.isna().sum()}')
@@ -889,3 +894,58 @@ class ReliabilityAssessment:
             report['weighted avg']['f0.5-score'] = fbeta_score(eval_df['label'], value, average='weighted', beta=0.5)
             df = pd.DataFrame(report).transpose().to_csv(
                 Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
+
+    def neural_eval(self):
+        # Label Dataset -> Ground Truth should not be changed
+        projection_field = {'ra_raw.BERT-detector.real_probability':    1,
+                            'ra_raw.BERT-detector.fake_probability':    1,
+                            'ra_raw.gpt2-xl-detector.real_probability': 1,
+                            'ra_raw.gpt2-xl-detector.fake_probability': 1,
+                            'ra_raw.RoBERTa-detector.real_probability': 1,
+                            'ra_raw.RoBERTa-detector.fake_probability': 1,
+                            'ra_raw.label':                             1}
+        query_field = self.__annotation_query(self.ticker)
+        tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+                                                                  projection_override=projection_field)
+
+        output_df = pd.DataFrame(
+            columns=['precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall', 'w-f1-score',
+                     'w-f0.5-score'])
+        for threshold in np.linspace(0, 1, 51):
+            self.config.set('RA.Neural.Config', 'roberta_threshold', str(threshold))
+            with open('config.ini', 'w') as configfile:
+                self.config.write(configfile)
+            roberta_threshold = round(self.config.getfloat('RA.Neural.Config', 'roberta_threshold'), 2)
+            batch_size = 100
+            for i in trange(0, len(tweets_collection), batch_size):
+                tweets_collection_small = tweets_collection[i:i + batch_size]
+                neural_filter = [self.__neural_rules(roberta_prob=tweet['ra_raw']['RoBERTa-detector'],
+                                                     gpt2_prob=tweet['ra_raw']['gpt2-xl-detector'],
+                                                     bert_prob=tweet['ra_raw']['BERT-detector'],
+                                                     neural_mode='precision', roberta_threshold=roberta_threshold)
+                                 for tweet in tweets_collection_small]
+
+                self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
+                                                 'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
+
+            # FOR EVALUATION ONLY
+            eval_projection_filed = {'ra_raw.neural-filter': 1, 'ra_raw.label': 1}
+            label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+                                                                  projection_override=eval_projection_filed)
+            eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=['neural-filter', 'label'])
+            self.default_logger.info(f'Missing Value (NaN) Summary: {eval_df.isna().sum()}')
+            eval_df.fillna(False, inplace=True)
+
+            report = classification_report(eval_df['label'], eval_df['neural-filter'], output_dict=True)
+            report['False']['f0.5-score'] = fbeta_score(eval_df['label'], eval_df['neural-filter'], pos_label=0,
+                                                        beta=0.5)
+            report['weighted avg']['f0.5-score'] = fbeta_score(eval_df['label'], eval_df['neural-filter'],
+                                                               average='weighted',
+                                                               beta=0.5)
+            output_list = [report['False']['precision'], report['False']['recall'], report['False']['f1-score'],
+                           report['False']['f0.5-score'], report['weighted avg']['precision'],
+                           report['weighted avg']['recall'], report['weighted avg']['f1-score'],
+                           report['weighted avg']['f0.5-score']]
+            output_df.append(output_list, ignore_index=True)
+        df = pd.DataFrame(output_df).to_csv(
+            Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
