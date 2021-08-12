@@ -383,11 +383,11 @@ anomaly_detection/models/*
 anomaly_detection/reports/*
 information_retrieval/news/*
 config.ini
-*.pt
 *.bin
 *.vec
 *.txt
 reliability_assessment/neural_filter/roberta_detector/models/*
+reliability_assessment/neural_filter/neural_classifier/*
 reliability_assessment/neural_filter/grover/models/*
 reliability_assessment/subj_filter/infersent/fastText/*
 reliability_assessment/subj_filter/infersent/GloVe/*
