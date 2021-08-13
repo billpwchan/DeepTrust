@@ -909,7 +909,7 @@ class ReliabilityAssessment:
                                                                   projection_override=projection_field)
 
         output_df = pd.DataFrame(
-            columns=['precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall', 'w-f1-score',
+            columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall', 'w-f1-score',
                      'w-f0.5-score'])
         for threshold in np.linspace(0, 1, 51):
             self.config.set('RA.Neural.Config', 'roberta_threshold', str(threshold))
@@ -942,10 +942,9 @@ class ReliabilityAssessment:
             report['weighted avg']['f0.5-score'] = fbeta_score(eval_df['label'], eval_df['neural-filter'],
                                                                average='weighted',
                                                                beta=0.5)
-            output_list = [report['False']['precision'], report['False']['recall'], report['False']['f1-score'],
+            output_list = [str(threshold), report['False']['precision'], report['False']['recall'], report['False']['f1-score'],
                            report['False']['f0.5-score'], report['weighted avg']['precision'],
                            report['weighted avg']['recall'], report['weighted avg']['f1-score'],
                            report['weighted avg']['f0.5-score']]
-            output_df.append(output_list, ignore_index=True)
-        df = pd.DataFrame(output_df).to_csv(
-            Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
+            output_df = output_df.append(pd.Series(output_list, index=output_df.columns), ignore_index=True)
+        output_df.to_csv(Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
