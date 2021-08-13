@@ -495,9 +495,6 @@ class ReliabilityAssessment:
         tweets_collection = self.db_instance.get_non_updated_tweets('ra_raw.targer-detector', self.input_date,
                                                                     self.ticker, database='tweet',
                                                                     select_field={'text': 1}, feature_filter=True)
-        # query_field = self.__annotation_query(self.ticker)
-        # tweets_collection = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-        #                                                           projection_override={'text': 1})
         self.default_logger.info(f"Remaining Tweets: {len(tweets_collection)}")
 
         batch_size = 30
@@ -909,14 +906,16 @@ class ReliabilityAssessment:
                                                                   projection_override=projection_field)
 
         output_df = pd.DataFrame(
-            columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall', 'w-f1-score',
+            columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall',
+                     'w-f1-score',
                      'w-f0.5-score'])
-        for threshold in np.linspace(0, 1, 51):
+        for threshold in np.linspace(0, 1, 101):
             self.config.set('RA.Neural.Config', 'roberta_threshold', str(threshold))
             with open('config.ini', 'w') as configfile:
                 self.config.write(configfile)
             roberta_threshold = round(self.config.getfloat('RA.Neural.Config', 'roberta_threshold'), 2)
             batch_size = 100
+            updated_neural_result = []
             for i in trange(0, len(tweets_collection), batch_size):
                 tweets_collection_small = tweets_collection[i:i + batch_size]
                 neural_filter = [self.__neural_rules(roberta_prob=tweet['ra_raw']['RoBERTa-detector'],
@@ -924,15 +923,17 @@ class ReliabilityAssessment:
                                                      bert_prob=tweet['ra_raw']['BERT-detector'],
                                                      neural_mode='precision', roberta_threshold=roberta_threshold)
                                  for tweet in tweets_collection_small]
-
+                updated_neural_result.extend(neural_filter)
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
             # FOR EVALUATION ONLY
-            eval_projection_filed = {'ra_raw.neural-filter': 1, 'ra_raw.label': 1}
-            label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-                                                                  projection_override=eval_projection_filed)
-            eval_df = pd.DataFrame([item['ra_raw'] for item in label_dataset], columns=['neural-filter', 'label'])
+            # eval_projection_filed = {'ra_raw.neural-filter': 1, 'ra_raw.label': 1}
+            # label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
+            #                                                       projection_override=eval_projection_filed)
+            eval_df = pd.DataFrame(
+                [zip(updated_neural_result, [item['ra_raw']['label'] for item in tweets_collection])],
+                columns=['neural-filter', 'label'])
             self.default_logger.info(f'Missing Value (NaN) Summary: {eval_df.isna().sum()}')
             eval_df.fillna(False, inplace=True)
 
@@ -942,9 +943,10 @@ class ReliabilityAssessment:
             report['weighted avg']['f0.5-score'] = fbeta_score(eval_df['label'], eval_df['neural-filter'],
                                                                average='weighted',
                                                                beta=0.5)
-            output_list = [str(threshold), report['False']['precision'], report['False']['recall'], report['False']['f1-score'],
+            output_list = [str(threshold), report['False']['precision'], report['False']['recall'],
+                           report['False']['f1-score'],
                            report['False']['f0.5-score'], report['weighted avg']['precision'],
                            report['weighted avg']['recall'], report['weighted avg']['f1-score'],
                            report['weighted avg']['f0.5-score']]
             output_df = output_df.append(pd.Series(output_list, index=output_df.columns), ignore_index=True)
-        output_df.to_csv(Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
+            output_df.to_csv(Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
