@@ -906,14 +906,13 @@ class ReliabilityAssessment:
                                                                   projection_override=projection_field)
 
         output_df = pd.DataFrame(
-            columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score', 'w-precision', 'w-recall',
-                     'w-f1-score',
-                     'w-f0.5-score'])
+            columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score',
+                     'w-precision', 'w-recall', 'w-f1-score', 'w-f0.5-score'])
         for threshold in np.linspace(0, 1, 101):
-            self.config.set('RA.Neural.Config', 'roberta_threshold', str(threshold))
+            self.config.set('RA.Neural.Config', 'roberta_threshold', str(round(threshold, 3)))
             with open('config.ini', 'w') as configfile:
                 self.config.write(configfile)
-            roberta_threshold = round(self.config.getfloat('RA.Neural.Config', 'roberta_threshold'), 2)
+            roberta_threshold = self.config.getfloat('RA.Neural.Config', 'roberta_threshold')
             batch_size = 100
             updated_neural_result = []
             for i in trange(0, len(tweets_collection), batch_size):
@@ -927,12 +926,8 @@ class ReliabilityAssessment:
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
                                                  'ra_raw.neural-filter', neural_filter, self.input_date, self.ticker)
 
-            # FOR EVALUATION ONLY
-            # eval_projection_filed = {'ra_raw.neural-filter': 1, 'ra_raw.label': 1}
-            # label_dataset = self.db_instance.get_annotated_tweets(query_field, self.input_date, self.ticker,
-            #                                                       projection_override=eval_projection_filed)
             eval_df = pd.DataFrame(
-                [zip(updated_neural_result, [item['ra_raw']['label'] for item in tweets_collection])],
+                zip(updated_neural_result, [item['ra_raw']['label'] for item in tweets_collection]),
                 columns=['neural-filter', 'label'])
             self.default_logger.info(f'Missing Value (NaN) Summary: {eval_df.isna().sum()}')
             eval_df.fillna(False, inplace=True)
