@@ -15,7 +15,7 @@ class MongoDB:
         config = configparser.ConfigParser()
         config.read('./config.ini')
         client = pymongo.MongoClient(
-            f"mongodb+srv://{config.get('MongoDB.Config', 'username')}:{config.get('MongoDB.Config', 'password')}@cluster0.gdbrk.mongodb.net/deeptrust?retryWrites=true&w=majority")
+            f"mongodb+srv://{config.get('MongoDB.Config', 'username')}:{config.get('MongoDB.Config', 'password')}@cluster0.gdbrk.mongodb.net/{config.get('MongoDB.config', 'database')}?retryWrites=true&w=majority")
         self.db = client[config.get('MongoDB.Config', 'database')]
         self.default_logger = logger.get_logger('mongodb')
 
