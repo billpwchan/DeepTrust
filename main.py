@@ -34,7 +34,7 @@ def main():
                                  'sentiment-verify', 'label', 'eval', 'neural-eval'])
     parser.add_argument('-models', "--models", nargs='*', help="Specify Models for tasks", type=str,
                         choices=['roberta', 'gltr-gpt2', 'gltr-bert', 'svm', 'infersent', 'textblob', 'wordemb',
-                                 'ibm-fasttext'])
+                                 'ibm-fasttext', 'roberta_threshold', 'classifier_threshold'])
 
     # Parse Arguments
     args = parser.parse_args()
@@ -114,7 +114,8 @@ def main():
         if 'eval' in args.ra_tasks:
             ra_instance.tweet_eval()
         if 'neural-eval' in args.ra_tasks:
-            ra_instance.neural_eval()
+            ra_instance.neural_eval(
+                key='classifier_threshold' if 'classifier_threshold' in args.models else 'roberta_threshold')
 
 
 if __name__ == '__main__':

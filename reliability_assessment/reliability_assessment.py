@@ -402,7 +402,7 @@ class ReliabilityAssessment:
         self.default_logger.info(f'Calibrated Model Mean Accuracy: {calibrated_clf.score(X, y)}')
 
     def __neural_rules(self, roberta_prob: dict, gpt2_prob: dict, bert_prob: dict,
-                       roberta_threshold: float = None, neural_mode: str = None) -> bool or None:
+                       neural_mode: str = None) -> bool or None:
         """
         The rule can be:
         1) If roberta_prob['real'] is greater than the threshold (e.g., 0.8), we say the tweet is definitely real
@@ -416,10 +416,8 @@ class ReliabilityAssessment:
         # Empty dicts, mostly caused by tokenizer errors. Ignore them.
         if not roberta_prob or not gpt2_prob or not bert_prob:
             return False
-        # If override, then use the parameter value
-        roberta_threshold = self.config.getfloat('RA.Neural.Config', 'roberta_threshold') \
-            if roberta_threshold is None else roberta_threshold
-        if roberta_prob['real_probability'] >= roberta_threshold:
+
+        if roberta_prob['real_probability'] >= self.config.getfloat('RA.Neural.Config', 'roberta_threshold'):
             return True
         else:
             gpt2_weight = self.config.getfloat('RA.Neural.Config', 'gpt2_weight')
@@ -892,8 +890,9 @@ class ReliabilityAssessment:
             df = pd.DataFrame(report).transpose().to_csv(
                 Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
 
-    def neural_eval(self):
+    def neural_eval(self, key='roberta_threshold'):
         # Label Dataset -> Ground Truth should not be changed
+
         projection_field = {'ra_raw.BERT-detector.real_probability':    1,
                             'ra_raw.BERT-detector.fake_probability':    1,
                             'ra_raw.gpt2-xl-detector.real_probability': 1,
@@ -909,10 +908,9 @@ class ReliabilityAssessment:
             columns=['threshold', 'precision', 'recall', 'f1-score', 'f0.5-score',
                      'w-precision', 'w-recall', 'w-f1-score', 'w-f0.5-score'])
         for threshold in np.linspace(0, 1, 101):
-            self.config.set('RA.Neural.Config', 'roberta_threshold', str(round(threshold, 3)))
+            self.config.set('RA.Neural.Config', key, str(round(threshold, 3)))
             with open('config.ini', 'w') as configfile:
                 self.config.write(configfile)
-            roberta_threshold = self.config.getfloat('RA.Neural.Config', 'roberta_threshold')
             batch_size = 100
             updated_neural_result = []
             for i in trange(0, len(tweets_collection), batch_size):
@@ -920,7 +918,7 @@ class ReliabilityAssessment:
                 neural_filter = [self.__neural_rules(roberta_prob=tweet['ra_raw']['RoBERTa-detector'],
                                                      gpt2_prob=tweet['ra_raw']['gpt2-xl-detector'],
                                                      bert_prob=tweet['ra_raw']['BERT-detector'],
-                                                     neural_mode='precision', roberta_threshold=roberta_threshold)
+                                                     neural_mode='precision')
                                  for tweet in tweets_collection_small]
                 updated_neural_result.extend(neural_filter)
                 self.db_instance.update_one_bulk([tweet['_id'] for tweet in tweets_collection_small],
@@ -944,4 +942,4 @@ class ReliabilityAssessment:
                            report['weighted avg']['recall'], report['weighted avg']['f1-score'],
                            report['weighted avg']['f0.5-score']]
             output_df = output_df.append(pd.Series(output_list, index=output_df.columns), ignore_index=True)
-            output_df.to_csv(Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_SPECIAL_NEURAL.csv')
+            output_df.to_csv(Path.cwd() / 'evaluation' / f'{self.ticker}_{self.input_date}_{key}.csv')
