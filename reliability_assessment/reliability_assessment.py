@@ -858,6 +858,16 @@ class ReliabilityAssessment:
                                         self.input_date, self.ticker)
 
     def tweet_eval(self):
+        tweets_collection = self.db_instance.get_all_tweets(self.input_date, self.ticker, database='tweet',
+                                                            feature_filter=True, neural_filter=False,
+                                                            projection_override={'ra_raw.RoBERTa-detector': 1})
+        with open(f'./evaluation/{self.ticker}_{self.input_date}_roberta_histogram.txt', 'w') as f:
+            for tweet in tweets_collection:
+                f.write(str(tweet['ra_raw']['RoBERTa-detector']['real_probability']))
+                f.write('\n')
+
+        exit(0)
+
         query_field = self.__annotation_query(self.ticker)
         filters = ['feature-filter', 'neural-filter', 'arg-filter', 'subj-filter', 'label']
         projection_field = {f'ra_raw.{filter_name}': 1 for filter_name in filters}
