@@ -165,6 +165,23 @@ Update `FinBERT` evaluation results to the Mongo collection.
 python -m RA -ad 30/04/2021 -t TWTR -rat sentiment-verify
 ```
 
+### Evaluation Module Examples (For Annotators Only)
+Annotate a subset of original tweet collection using customized search query for extracting maximum number of 
+reliable tweets.
+```bash
+python -m RA -ad 30/04/2021 -t TWTR -rat label
+```
+
+Evaluate performance metrics - both per-class and weighted metrics on the annotated subset. 
+```bash
+python -m RA -ad 30/04/2021 -t TWTR -rat eval
+```
+
+Evaluate the sensitivity of synthetic text filter on changes of RoBERTa threshold.
+```bash
+python -m RA -ad 30/04/2021 -t TWTR -rat neural-eval --models roberta_threshold
+```
+
 ## Important Notes
 
 Change following code in ```modeling_gpt.py``` in package ```pytorch-pretrained-bert``` to include GPT-2 Large
