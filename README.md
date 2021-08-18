@@ -252,8 +252,9 @@ python run_clm.py --model_name_or_path gpt2-medium --model_type gpt2 --train_dat
 ## Acknowledgement
 
 The below list is acknowledgement of direct reference to their published code repository in forms of Copy+Paste or 
-with slight modification. All codes listed below are open-sourced and protected under MIT license or Apache 2.0 
-license. 
+with slight modification. The main skeleton of the DeepTrust framework is entirely implemented by the author, and 
+only pre-trained model configurations are referenced. All codes listed below are open-sourced and protected under MIT 
+license or Apache 2.0 license. 
 
 - **GLTR Package**: Based on https://github.com/HendrikStrobelt/detecting-fake-text. 
 - **GPT Generator Model**: Based on https://github.com/huggingface/transformers/tree/master/examples/pytorch/text-generation
