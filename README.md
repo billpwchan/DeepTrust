@@ -247,9 +247,23 @@ python run_clm.py --model_name_or_path gpt2-medium --model_type gpt2 --train_dat
 
 - [x] Anomaly Detection module
 - [x] Information Retrieval Module
-- [ ] Reliability Assessment Module
+- [x] Reliability Assessment Module
 
------------
+## Acknowledgement
+
+The below list is acknowledgement of direct reference to their published code repository in forms of Copy+Paste or 
+with slight modification. All codes listed below are open-sourced and protected under MIT license or Apache 2.0 
+license. 
+
+- **GLTR Package**: Based on https://github.com/HendrikStrobelt/detecting-fake-text. 
+- **GPT Generator Model**: Based on https://github.com/huggingface/transformers/tree/master/examples/pytorch/text-generation
+- **RoBERTa Discriminative Model**: Based on https://github.com/openai/gpt-2-output-dataset/tree/master/detector
+- **GPT-2 Fine-Tuning**: Based on https://github.com/huggingface/transformers/blob/master/examples/pytorch/language-modeling/run_clm.py
+- **FinBERT**: Based on https://github.com/ProsusAI/finBERT
+- **InferSent**: Based on https://github.com/facebookresearch/InferSent
+- **Word-Embedding Subjectivity Filter**: Based on https://github.com/Ritika2001/Word-Embedding-Models-for-Subjectivity-Analysis
+
+
 
 ## Contributor
 
