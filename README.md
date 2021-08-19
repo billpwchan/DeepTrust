@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="DeepTrust Logo" src="https://i.ibb.co/4gCKfgt/logo.png" width="200px" />
+  <img alt="DeepTrust Logo" src="https://i.ibb.co/xFj1Yq9/logo.png" width="200px" />
 
 **billpwchan/DeepTrust API Reference Documentation**
 </div>
