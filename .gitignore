@@ -390,5 +390,6 @@ reliability_assessment/neural_filter/gpt_generator/*
 reliability_assessment/subj_filter/infersent/fastText/*
 reliability_assessment/subj_filter/infersent/GloVe/*
 reliability_assessment/subj_filter/wordemb/models/*.h5
+database/mongodb_backup/*
 /wandb/
 /runs/
