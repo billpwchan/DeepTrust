@@ -264,7 +264,15 @@ protected under MIT license or Apache 2.0 license.
 - **InferSent**: Based on https://github.com/facebookresearch/InferSent
 - **Word-Embedding Subjectivity Filter**: Based on https://github.com/Ritika2001/Word-Embedding-Models-for-Subjectivity-Analysis
 
-
+## Citation
+```
+@mastersthesis{chan2021,
+author = "Pok Wah (Bill) Chan",
+title = "DeepTrust: A Reliable Financial Knowledge Retrieval Framework For Explaining Extreme Pricing Anomalies",
+school = "Imperial College London",
+year = "2021"
+}
+```
 
 ## Contributor
 
