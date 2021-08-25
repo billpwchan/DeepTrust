@@ -46,6 +46,49 @@ conda env update --name DeepTrust --file environment.yml --prune
 
 Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
+## Configuration File Format
+
+Please create a file `config.ini` in the root folder before executing any following commands.
+
+```ini
+[Eikon.Config]
+ek_api_key = <Refinitiv Eikon>
+open_permid = <Refinitiv Eikon>
+
+[Twitter.Config]
+consumer_key = <Twitter API V2>
+consumer_secret = <Twitter API V2>
+bearer_token = <Twitter API V2>
+access_token_key = <Twitter API V2>
+access_token_secret = <Twitter API V2>
+
+[MongoDB.Config]
+database = <MongoDB Atlas>
+username = <MongoDB Atlas>
+password = <MongoDB Atlas>
+
+[RA.Feature.Config]
+min_tweet_retweet = 0
+min_tweet_reply = 0
+min_tweet_like = 0
+min_tweet_quote = 0
+max_tweet_tags = 15
+min_author_followers = 0
+min_author_following = 0
+min_author_tweet = 0
+min_author_listed = 0
+max_profanity_prob = 0.2
+
+[RA.Neural.Config]
+roberta_threshold = 0.7
+classifier_threshold = 0.9
+gpt2_weight = 0.54
+bert_weight = 0.46
+neural_mode = precision
+
+[RA.Subj.Config]
+textblob_threshold = 0.5
+```
 
 ## Command-line Interface Usages
 
