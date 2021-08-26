@@ -1,9 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 import random
 
-import numpy as np
 import pandas as pd
 from nltk.tokenize import sent_tokenize
 from torch.nn import CrossEntropyLoss, MSELoss
