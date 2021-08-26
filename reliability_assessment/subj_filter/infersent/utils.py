@@ -7,9 +7,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import numpy as np
-import re
 import inspect
+import re
+
+import numpy as np
 from torch import optim
 
 

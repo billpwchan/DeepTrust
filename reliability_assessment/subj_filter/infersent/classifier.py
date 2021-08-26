@@ -12,13 +12,14 @@ Classifiers include Logistic Regression and MLP
 
 from __future__ import absolute_import, division, unicode_literals
 
-import numpy as np
 import copy
-from reliability_assessment.subj_filter.infersent import utils
 
+import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
+from reliability_assessment.subj_filter.infersent import utils
 
 
 class PyTorchClassifier(object):

@@ -27,14 +27,14 @@ from nltk.tokenize import TweetTokenizer
 from profanity_check import predict_prob
 from sklearn import preprocessing
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, fbeta_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 from sklearnex import patch_sklearn
 from textblob import TextBlob
 from tqdm import tqdm, trange
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from sklearn.metrics import fbeta_score
+
 from database.mongodb_atlas import MongoDB
 from reliability_assessment.neural_filter.gpt_generator.model import TweetGeneration
 from reliability_assessment.neural_filter.model import DETECTOR_MAP, NeuralVerifier, SUB_PROCESSES
