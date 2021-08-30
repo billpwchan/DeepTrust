@@ -2,7 +2,17 @@
   <img alt="DeepTrust Logo" src="https://i.ibb.co/xFj1Yq9/logo.png" width="200px" />
 
 **billpwchan/DeepTrust API Reference Documentation**
+
+[![Issues](https://img.shields.io/github/issues/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/issues)
+[![License](https://img.shields.io/github/license/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/blob/master/LICENSE)
+[![LastCommit](https://img.shields.io/github/last-commit/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/blob/master/LICENSE)
+
+[![CommitActivity](https://img.shields.io/github/commit-activity/y/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/commits/master)
+[![RepoSize](https://img.shields.io/github/repo-size/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust)
+[![Languages](https://img.shields.io/github/languages/top/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust)
+
 </div>
+
 
 ## DeepTrust Description
 
@@ -185,7 +195,7 @@ python main.py -m RA -ad 30/04/2021 -t TWTR -rat arg-verify
 5. **Subjectivity Analysis and Filtering**
 
 Fine-Tune InferSent model using SUBJ dataset and store the model checkpoint
-to `. /reliability_assessment/subj_filter/infersent/models`.
+to `./reliability_assessment/subj_filter/infersent/models`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-train
@@ -203,6 +213,7 @@ python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verif
 ```
 
 6. **Sentiment Analysis**
+
 Update `FinBERT` evaluation results to the Mongo collection.
 ```bash
 python -m RA -ad 30/04/2021 -t TWTR -rat sentiment-verify
