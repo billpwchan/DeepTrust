@@ -54,7 +54,11 @@ To update current environment with the latest dependencies, use the following co
 conda env update --name DeepTrust --file environment.yml --prune
 ```
 
-Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
+## Prerequisite
+
+1. **Refinitiv Eikon**: https://eikon.refinitiv.com/index.html
+2. **Twitter Developer V2 Access**: https://developer.twitter.com/en/portal/dashboard
+3. **Microsoft Visual C++ 14.0 or greater**: Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
 ## Configuration File Format
 
@@ -118,11 +122,20 @@ Available `--ad_method` includes `['arima', 'lof', 'if]`, which stands for `AUTO
 
 ### Information Retrieval Module Examples
 
-Collect correlated tweets from Twitter data stream of `TWTR` (Twitter Inc.) regards to a detected financial anomaly on
-30 April 2021. Data will be stored in the MongoDB database as specified in the `config.ini` file.
+**General Tweet Retrieval**
+
+Collect correlated tweets from Twitter data stream of `TWTR` (Twitter Inc.) regarding a detected financial anomaly on
+30 April 2021. Data uploaded to MongoDB database specified in the `config.ini` file.
 
 ```bash
-python main.py -m IR -t TWTR -ad 30/04/2021
+python main.py -m IR -t TWTR -ad 30/04/2021 -irt tweet-search
+```
+
+**Tweet Updates (Geo-Data + Tweet Sensitivity)**
+
+For out-dated tweets missing `possible_sensitive` and `geo` fields, update those tweets in the MongoDB database. 
+```bash
+python main.py -m IR -t TWTR -ad 30/04/2021 -irt tweet-update
 ```
 
 ### Reliability Assessment Module Examples
@@ -130,7 +143,8 @@ python main.py -m IR -t TWTR -ad 30/04/2021
 1. **Feature-based Filtering**
 
 Feature-based filtering on the retrieved collection of tweets (e.g., Remove tweets with no public metrics -
-Retweets/Likes/Quotes). Rules can be specified in the `config.ini` under `RA.Feature.Config`.
+Retweets/Likes/Quotes). Rules can be specified in the `config.ini` under `RA.Feature.Config`. Verified results are 
+updated to the MongoDB database in the field `feature-filter`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat feature-filter
@@ -140,7 +154,7 @@ python main.py -m RA -ad 30/04/2021 -t TWTR -rat feature-filter
 
 *(Note: Synthetic Text Filtering only apply on tweets with Feature-Filter = True)*
 
-Update `RoBERTa-based Detector`, `GLTR-BERT` and `GLTR-GPT-2` detectors results to MongoDB collection first. With a
+Update `RoBERTa-based Detector`, `GLTR-BERT` and `GLTR-GPT2` detectors results to MongoDB collection first. With a
 powerful GPU (tested on 1080Ti), the total time is approximately 3 days for the TWTR example, shorter for other
 financial anomalies.
 
@@ -148,7 +162,7 @@ financial anomalies.
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update --models roberta gltr-bert gltr-gpt2
 ```
 
-Fine-tune a GPT-2-medium generator model and generate some fake tweets for training! It may take up to 4 hours on a
+Fine-tune a GPT-2-medium generator model and generate some fake tweets for training. It may take several hours on a
 single 1080Ti GPU to fine-tune the model. The fine-tuned model is by default saved
 to `./reliability_assessment/neural_filter/gpt_generator`. WanDB is suggested for monitoring the training progress.
 
@@ -163,18 +177,20 @@ classifying synthetic tweets.
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update-fake --models roberta gltr-bert gltr-gpt2
 ```
 
-Train a SVM classifier and use it for generating the final decision on tweets. 
+Train an SVM classifier and use it for generating the final decision on tweets. 
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-train --models gltr-bert gltr-gpt2
 ```
 
 Also, SVM classification results should be updated to the tweet collection.
+
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-update --models svm
 ```
 
-Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors.
+Finally, verify all tweets based on the `RoBERTa-based detector`, `GLTR-BERT-SVM` and `GLTR-GPT2-SVM` detectors, and 
+update them to the MongoDB Database in the field `neural-filter`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat neural-verify
@@ -192,7 +208,7 @@ Update argument detection results to the mongodb collection using the sequence t
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat arg-verify
 ```
 
-5. **Subjectivity Analysis and Filtering**
+4. **Subjectivity Analysis and Filtering**
 
 Fine-Tune InferSent model using SUBJ dataset and store the model checkpoint
 to `./reliability_assessment/subj_filter/infersent/models`.
@@ -201,20 +217,22 @@ to `./reliability_assessment/subj_filter/infersent/models`.
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-train
 ```
 
-Update `InferSent`, `WordEmb` and `TextBlob` evaluation results to the Mongo collection.
+Update `InferSent`, `WordEmb` and `TextBlob` evaluation results to the MongoDB database.
 ```bash
 python main.py -m RA -ad 30/04/2021 -t TWTR -rat subj-update --models infersent wordemb textblob
 ```
 
-Update subjectivity analysis results to the mongodb collection using the fine-tuned MLP model.
+Update subjectivity analysis results to the mongodb collection using the fine-tuned MLP model. Results are stored in 
+MongoDB database in the field `subj-filter`.
 
 ```bash
 python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
 ```
 
-6. **Sentiment Analysis**
+5. **Sentiment Analysis**
 
-Update `FinBERT` evaluation results to the Mongo collection.
+Update `FinBERT` evaluation results to the MongoDB database in the field `sentiment-filter`.
+
 ```bash
 python -m RA -ad 30/04/2021 -t TWTR -rat sentiment-verify
 ```
@@ -222,6 +240,7 @@ python -m RA -ad 30/04/2021 -t TWTR -rat sentiment-verify
 ### Evaluation Module Examples (For Annotators Only)
 Annotate a subset of original tweet collection using customized search query for extracting maximum number of 
 reliable tweets.
+
 ```bash
 python -m RA -ad 30/04/2021 -t TWTR -rat label
 ```
