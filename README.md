@@ -214,7 +214,7 @@ Fine-Tune InferSent model using SUBJ dataset and store the model checkpoint
 to `./reliability_assessment/subj_filter/infersent/models`.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-train
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat subj-train
 ```
 
 Update `InferSent`, `WordEmb` and `TextBlob` evaluation results to the MongoDB database.
@@ -226,7 +226,7 @@ Update subjectivity analysis results to the mongodb collection using the fine-tu
 MongoDB database in the field `subj-filter`.
 
 ```bash
-python main.py -m RA -ad 30/04/2021 -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
+python main.py -m RA -ad 30/04/2021 -t TWTR -rat subj-verify
 ```
 
 5. **Sentiment Analysis**
@@ -261,16 +261,18 @@ Change following code in ```modeling_gpt.py``` in package ```pytorch-pretrained-
 capabilities
 
 ```python
-PRETRAINED_MODEL_ARCHIVE_MAP = {"gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-pytorch_model.bin",
-                                "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-pytorch_model.bin",
-                                "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-pytorch_model.bin",
-                                "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-pytorch_model.bin"
-                                }
-PRETRAINED_CONFIG_ARCHIVE_MAP = {"gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-config.json",
-                                 "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-config.json",
-                                 "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-config.json",
-                                 "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-config.json"
-                                 }
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    "gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-pytorch_model.bin",
+    "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-pytorch_model.bin",
+    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-pytorch_model.bin",
+    "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-pytorch_model.bin"
+}
+PRETRAINED_CONFIG_ARCHIVE_MAP = {
+    "gpt2":        "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-config.json",
+    "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-config.json",
+    "gpt2-large":  "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-config.json",
+    "gpt2-xl":     "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-config.json"
+}
 ```
 
 Same for ```tokenization_gpt2.py``` in package ```pytorch-pretrained-bert``` to include GPT-2 Large capabilities
