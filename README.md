@@ -341,11 +341,15 @@ protected under MIT license or Apache 2.0 license.
 
 ## Citation
 ```
-@mastersthesis{chan2021,
-author = "Pok Wah (Bill) Chan",
-title = "DeepTrust: A Reliable Financial Knowledge Retrieval Framework For Explaining Extreme Pricing Anomalies",
-school = "Imperial College London",
-year = "2021"
+@misc{https://doi.org/10.48550/arxiv.2203.08144,
+  doi = {10.48550/ARXIV.2203.08144},
+  url = {https://arxiv.org/abs/2203.08144},
+  author = {Chan, Pok Wah},
+  keywords = {Statistical Finance (q-fin.ST), Computation and Language (cs.CL), Machine Learning (cs.LG), Social and Information Networks (cs.SI), FOS: Economics and business, FOS: Economics and business, FOS: Computer and information sciences, FOS: Computer and information sciences},
+  title = {DeepTrust: A Reliable Financial Knowledge Retrieval Framework For Explaining Extreme Pricing Anomalies},
+  publisher = {arXiv},
+  year = {2022},
+  copyright = {arXiv.org perpetual, non-exclusive license}
 }
 ```
 
