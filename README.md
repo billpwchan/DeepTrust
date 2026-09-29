@@ -1,20 +1,29 @@
-<div align="center">
-  <img alt="DeepTrust Logo" src="https://i.ibb.co/xFj1Yq9/logo.png" width="200px" />
+<a href="https://github.com/billpwchan"><img src="https://raw.githubusercontent.com/billpwchan/billpwchan/output/banner-DeepTrust.svg" alt="DeepTrust: explaining extreme pricing anomalies with reliable financial knowledge retrieval" width="100%"></a>
 
-**billpwchan/DeepTrust API Reference Documentation**
+# DeepTrust
 
-[![Issues](https://img.shields.io/github/issues/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/issues)
-[![License](https://img.shields.io/github/license/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/blob/master/LICENSE)
-[![LastCommit](https://img.shields.io/github/last-commit/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/blob/master/LICENSE)
+**A reliable financial knowledge retrieval framework for explaining extreme pricing anomalies.** When a stock makes an extreme move, DeepTrust finds the related discussion on Twitter and keeps only the information that holds up, judged by argument structure, evidence validity, traces of machine-generated text and subjectivity.
 
-[![CommitActivity](https://img.shields.io/github/commit-activity/y/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust/commits/master)
-[![RepoSize](https://img.shields.io/github/repo-size/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust)
-[![Languages](https://img.shields.io/github/languages/top/billpwchan/DeepTrust?style=for-the-badge)](https://github.com/billpwchan/DeepTrust)
+以可信的金融知識檢索解釋極端價格異動：在異動發生時定位相關推文，並從論證結構、證據有效性、生成文本痕跡與主觀性多角度評估可信度。
 
-</div>
+[![arXiv](https://img.shields.io/badge/arXiv-2203.08144-b31b1b?style=flat-square)](https://arxiv.org/abs/2203.08144)
+[![License](https://img.shields.io/github/license/billpwchan/DeepTrust?style=flat-square&color=161b22)](LICENSE)
+[![Python](https://img.shields.io/badge/python-conda-161b22?style=flat-square)](environment.yml)
 
+> [!NOTE]
+> Paper: *DeepTrust: A Reliable Financial Knowledge Retrieval Framework For Explaining Extreme Pricing Anomalies*, Pok Wah Chan, arXiv:2203.08144 (2022). [Read it on arXiv](https://arxiv.org/abs/2203.08144).
 
-## DeepTrust Description
+## How it works
+
+```mermaid
+flowchart LR
+  Price[Price series<br/>Refinitiv Eikon] --> AD[Anomaly Detection<br/>extreme move + event window]
+  AD --> IR[Information Retrieval<br/>Twitter stream, query expansion, ranking]
+  IR --> RA[Reliability Assessment<br/>argument, evidence, GPT-text traces, subjectivity]
+  RA --> KB[Trusted knowledge<br/>explaining the anomaly]
+```
+
+## Overview
 
 Different from existing works, the present project proposes a reliable information extraction framework named DeepTrust.
 DeepTrust enables financial data providers to precisely locate correlated information on Twitter upon a financial
@@ -55,6 +64,9 @@ conda env update --name DeepTrust --file environment.yml --prune
 ```
 
 ## Prerequisite
+
+> [!IMPORTANT]
+> The retrieval module was built on the Twitter API v2 access available in 2021 to 2022. Access terms for the X API have changed since, so reproducing the retrieval step may require a paid API tier.
 
 1. **Refinitiv Eikon**: https://eikon.refinitiv.com/index.html
 2. **Twitter Developer V2 Access**: https://developer.twitter.com/en/portal/dashboard
@@ -353,6 +365,6 @@ protected under MIT license or Apache 2.0 license.
 }
 ```
 
-## Contributor
+## Author
 
-[Bill Chan -- Main Developer](https://github.com/billpwchan/)
+Built by [Bill Chan](https://github.com/billpwchan), who also builds the [futu_algo](https://github.com/billpwchan/futu_algo) trading stack.
