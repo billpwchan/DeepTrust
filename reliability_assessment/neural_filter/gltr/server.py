@@ -125,13 +125,19 @@ parser.add_argument("--port", default="5001")
 parser.add_argument("--nocache", default=False)
 parser.add_argument("--dir", type=str, default=os.path.abspath('data'))
 
-parser.add_argument("--no_cors", action='store_true')
+parser.add_argument("--no_cors", action='store_true')  # kept for compatibility; CORS is off by default
+# CORS is opt-in (--cors or GLTR_CORS=1) and limited to localhost origins unless
+# --cors_origins / GLTR_CORS_ORIGINS (comma-separated, regex allowed) says otherwise.
+parser.add_argument("--cors", action='store_true', default=os.environ.get('GLTR_CORS') == '1')
+parser.add_argument("--cors_origins", type=lambda s: s.split(','),
+                    default=os.environ.get('GLTR_CORS_ORIGINS',
+                                           r'^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$').split(','))
 
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    if not args.no_cors:
-        CORS(app.app, headers='Content-Type')
+    if args.cors and not args.no_cors:
+        CORS(app.app, origins=args.cors_origins, headers='Content-Type')
 
     app.run(port=int(args.port), debug=not args.nodebug, host=args.address)
 else:
