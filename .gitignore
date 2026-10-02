@@ -383,6 +383,7 @@ anomaly_detection/models/*
 anomaly_detection/reports/*
 information_retrieval/news/*
 config.ini
+twitter_keys.yaml
 reliability_assessment/neural_filter/roberta_detector/models/*
 reliability_assessment/neural_filter/neural_classifier/*
 reliability_assessment/neural_filter/grover/models/*
